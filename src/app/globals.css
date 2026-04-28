@@ -1,26 +1,33 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
+@theme {
+  /* 1. Material Design 3 Colors */
+  --color-surface: #fef7ff;
+  --color-surface-container: #f3edf7;
+  --color-surface-variant: #e7e0ec;
+  --color-primary: #6750a4;
+  --color-secondary: #625b71;
+
+  /* 2. Tactile Border Radius */
+  --radius-md-3: 28px;
+
+  /* 3. M3 Elevation Shadows */
+  --shadow-m3-1:
+    0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
+  --shadow-m3-2:
+    0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
+}
+
+/* 4. Base Overrides for Next.js 16 */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #fef7ff;
+  --foreground: #1d1b20;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* Uses the Geist font variable provided by Next.js */
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui;
 }
