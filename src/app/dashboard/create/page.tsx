@@ -11,6 +11,7 @@ export default function CreatePostPage() {
   const [content, setContent] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -23,38 +24,69 @@ export default function CreatePostPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
+
+    // 1. Get User Data for the "Author" field
+    const userString = localStorage.getItem("user");
+    const user = userString ? JSON.parse(userString) : null;
+    const token = localStorage.getItem("token");
+
+    if (!user || !token) {
+      setError("You must be logged in to publish.");
+      setLoading(false);
+      return;
+    }
 
     try {
-      // 1. Upload to Cloudinary via our API
+      // 2. Upload to Cloudinary (if image exists)
       let imageUrl = "";
       if (image) {
         const uploadRes = await fetch("/api/upload", {
           method: "POST",
           body: JSON.stringify({ image, folder: "posts" }),
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         });
         const uploadData = await uploadRes.json();
-        imageUrl = uploadData.data.url;
+        imageUrl = uploadData.data?.url || "";
       }
 
-      // 2. Create Post in MongoDB
+      // 3. Generate a Slug (URL friendly version of title)
+      const slug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, "");
+
+      // 4. Create Post in MongoDB
       const postRes = await fetch("/api/posts", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           title,
           content,
           coverImage: imageUrl,
           status: "published",
+          slug, // REQUIRED by Backend
+          author: user._id || user.id, // REQUIRED by Backend
         }),
       });
 
-      if (postRes.ok) router.push("/");
+      const postData = await postRes.json();
+
+      if (postRes.ok) {
+        router.push("/");
+        router.refresh();
+      } else {
+        setError(postData.error || "Failed to create post. Check all fields.");
+      }
     } catch (err) {
       console.error(err);
+      setError("A connection error occurred.");
     } finally {
       setLoading(false);
     }
@@ -67,13 +99,20 @@ export default function CreatePostPage() {
           Create New Post
         </h1>
 
+        {error && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 border border-red-100">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <MaterialCard>
-            {/* Title Input - Material Style */}
+            {/* Title Input */}
             <input
               type="text"
               placeholder="Post Title"
               className="w-full text-4xl font-bold bg-transparent border-b border-surface-variant focus:border-primary outline-none py-4 mb-6"
+              value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
             />
@@ -85,9 +124,17 @@ export default function CreatePostPage() {
               </label>
               <input
                 type="file"
+                accept="image/*"
                 onChange={handleImageChange}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-primary file:text-white hover:file:opacity-90"
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-primary file:text-white hover:file:opacity-90 cursor-pointer"
               />
+              {image && (
+                <img
+                  src={image}
+                  alt="Preview"
+                  className="mt-4 w-full h-48 object-cover rounded-xl"
+                />
+              )}
             </div>
 
             {/* TipTap Integration */}
@@ -97,7 +144,7 @@ export default function CreatePostPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-primary text-white px-8 py-3 rounded-full font-medium shadow-m3-1 hover:shadow-m3-2 transition-all disabled:bg-gray-400"
+                className="bg-primary text-white px-8 py-3 rounded-full font-bold shadow-m3-1 hover:shadow-m3-2 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {loading ? "Publishing..." : "Publish Post"}
               </button>
