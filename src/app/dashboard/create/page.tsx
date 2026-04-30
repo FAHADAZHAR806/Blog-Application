@@ -60,7 +60,7 @@ export default function CreatePostPage() {
         .replace(/(^-|-$)+/g, "");
 
       // 4. Create Post in MongoDB
-      const postRes = await fetch("/api/posts", {
+      const postRes = await fetch("/api/post", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

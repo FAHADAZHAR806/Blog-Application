@@ -3,6 +3,10 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import Image from "@tiptap/extension-image";
+import Link from "@tiptap/extension-link";
+import Underline from "@tiptap/extension-underline";
+import TextAlign from "@tiptap/extension-text-align";
 import { Toolbar } from "./Toolbar";
 
 interface Props {
@@ -13,33 +17,76 @@ interface Props {
 export default function RichTextEditor({ content, onChange }: Props) {
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        // Heading levels define kar sakte hain
+        heading: { levels: [1, 2, 3] },
+      }),
+      Underline,
+      // Image support with sizing classes
+      Image.configure({
+        inline: true,
+        HTMLAttributes: {
+          class:
+            "rounded-xl shadow-lg border border-gray-200 my-4 max-w-full h-auto",
+        },
+      }),
+      // Professional link handling
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: "text-primary underline font-semibold cursor-pointer",
+        },
+      }),
+      // Text alignment (Left, Center, Right)
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+      }),
       Placeholder.configure({
-        placeholder: "Write your story here...",
+        placeholder: "Start writing your masterpiece...",
       }),
     ],
     content: content,
-    // FIX 1: This prevents the editor from "freezing" during Next.js hydration
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
     editorProps: {
       attributes: {
-        // Added 'cursor-text' to show the user they can type here
+        // 'prose-img:mx-auto' images ko center karne ke liye hai
         class:
-          "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl focus:outline-none min-h-[400px] p-6 border border-t-0 border-surface-variant rounded-b-md-3 max-w-none cursor-text",
+          "prose prose-sm sm:prose lg:prose-lg xl:prose-xl focus:outline-none min-h-[500px] p-8 border border-t-0 border-gray-200 rounded-b-2xl max-w-none cursor-text bg-white prose-img:mx-auto prose-headings:font-black",
       },
     },
   });
 
+  // Agar user niche khali jagah pe click kare to editor focus ho jaye
+  const handleWrapperClick = () => {
+    if (editor && !editor.isFocused) {
+      editor.chain().focus().run();
+    }
+  };
+
   return (
-    <div className="w-full">
+    <div className="w-full flex flex-col shadow-sm rounded-2xl overflow-hidden border border-gray-200">
+      {/* Toolbar will now have access to image and align functions */}
       <Toolbar editor={editor} />
-      {/* FIX 2: We wrap the content in a div that forces focus if the user clicks the empty space */}
-      <div className="bg-surface" onClick={() => editor?.chain().focus().run()}>
+
+      <div
+        className="bg-white overflow-y-auto scrollbar-hide"
+        onClick={handleWrapperClick}
+      >
         <EditorContent editor={editor} />
       </div>
+
+      <style jsx global>{`
+        .tiptap p.is-editor-empty:first-child::before {
+          content: attr(data-placeholder);
+          float: left;
+          color: #adb5bd;
+          pointer-events: none;
+          height: 0;
+        }
+      `}</style>
     </div>
   );
 }
