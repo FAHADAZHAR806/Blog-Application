@@ -2,9 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import RichTextEditor from "@/components/editor/RichTextEditor";
+import dynamic from "next/dynamic"; // Dynamic import add kiya
 import MaterialCard from "@/components/ui/MaterialCard";
 import { fileToBase64 } from "@/lib/file-to-base64";
+
+// RichTextEditor ko dynamic load karein taake Hydration Error na aaye
+const RichTextEditor = dynamic(
+  () => import("@/components/editor/RichTextEditor"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-[500px] bg-gray-50 animate-pulse rounded-2xl border border-gray-200 flex items-center justify-center text-gray-400">
+        Loading Editor...
+      </div>
+    ),
+  },
+);
 
 export default function CreatePostPage() {
   const [title, setTitle] = useState("");
@@ -26,7 +39,7 @@ export default function CreatePostPage() {
     setLoading(true);
     setError("");
 
-    // 1. Get User Data for the "Author" field
+    // 1. Get User Data
     const userString = localStorage.getItem("user");
     const user = userString ? JSON.parse(userString) : null;
     const token = localStorage.getItem("token");
@@ -38,7 +51,7 @@ export default function CreatePostPage() {
     }
 
     try {
-      // 2. Upload to Cloudinary (if image exists)
+      // 2. Upload to Cloudinary
       let imageUrl = "";
       if (image) {
         const uploadRes = await fetch("/api/upload", {
@@ -53,7 +66,7 @@ export default function CreatePostPage() {
         imageUrl = uploadData.data?.url || "";
       }
 
-      // 3. Generate a Slug (URL friendly version of title)
+      // 3. Generate Slug
       const slug = title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
@@ -71,8 +84,8 @@ export default function CreatePostPage() {
           content,
           coverImage: imageUrl,
           status: "published",
-          slug, // REQUIRED by Backend
-          author: user._id || user.id, // REQUIRED by Backend
+          slug,
+          author: user._id || user.id,
         }),
       });
 
@@ -132,12 +145,12 @@ export default function CreatePostPage() {
                 <img
                   src={image}
                   alt="Preview"
-                  className="mt-4 w-full h-48 object-cover rounded-xl"
+                  className="mt-4 w-full h-48 object-cover rounded-xl border border-gray-100"
                 />
               )}
             </div>
 
-            {/* TipTap Integration */}
+            {/* TipTap Integration (Now dynamically imported) */}
             <RichTextEditor content={content} onChange={setContent} />
 
             <div className="mt-8 flex justify-end">
