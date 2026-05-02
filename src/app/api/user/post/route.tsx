@@ -1,27 +1,41 @@
-import { NextResponse } from "next/server";
-import dbConnect from "@/lib/mongodb";
-import Post from "@/models/Post";
-import { verifyToken } from "@/lib/auth-utils"; // Aapka token verify karne wala function
+import connectDB from "@/lib/mongodb";
+import User from "@/models/User";
+import { RegisterSchema } from "@/validations/auth";
+import { successResponse, errorResponse } from "@/lib/api-response";
+import bcrypt from "bcryptjs";
 
-export async function GET(req: Request) {
+export async function POST(req: Request) {
   try {
-    await dbConnect();
-    const authHeader = req.headers.get("authorization");
-    const token = authHeader?.split(" ")[1];
-    const decoded = verifyToken(token); // Token se user id nikalein
+    await connectDB();
+    const body = await req.json();
 
-    if (!decoded) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // 1. Validate data (ab isme role bhi validate hoga)
+    const validatedData = RegisterSchema.parse(body);
 
-    const posts = await Post.find({ author: decoded.id }).sort({
-      createdAt: -1,
+    const userExists = await User.findOne({ email: validatedData.email });
+    if (userExists) return errorResponse("User already exists", 400);
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(validatedData.password, salt);
+
+    // 2. Create user (role validatedData ke andar se hi chala jayega)
+    const user = await User.create({
+      ...validatedData,
+      password: hashedPassword,
     });
-    return NextResponse.json({ success: true, data: posts });
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to fetch posts" },
-      { status: 500 },
+
+    const { password, ...userWithoutPassword } = user.toObject();
+
+    return successResponse(
+      userWithoutPassword,
+      "User registered successfully",
+      201,
     );
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      return errorResponse(error.errors[0].message, 400);
+    }
+    console.error("Registration Error:", error);
+    return errorResponse("Internal Server Error", 500);
   }
 }

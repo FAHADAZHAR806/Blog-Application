@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import MaterialCard from "@/components/ui/MaterialCard";
 import Link from "next/link";
 
@@ -9,6 +10,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,23 +28,31 @@ export default function LoginPage() {
 
       if (res.ok) {
         // --- DATA SAFETY LOGIC ---
+        // API response structure ke mutabiq data nikalna
         const token = result.token || (result.data && result.data.token);
         const userData = result.user || result.data;
 
         if (token) {
-          // 1. Client-side storage (for the Navbar/UI)
+          // 1. Local Storage for UI state
           localStorage.setItem("token", token);
           localStorage.setItem("user", JSON.stringify(userData));
 
-          // 2. SERVER-SIDE COOKIE (Critical for Middleware/Redirects)
-          // This allows the server to see you are logged in
-          document.cookie = `token=${token}; path=/; max-age=3600; SameSite=Lax`;
+          // 2. Cookie for Middleware (Server-side safety)
+          document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax`;
 
-          // 3. Notify the Navbar to update immediately
+          // 3. Auth Change Event (Navbar update ke liye)
           window.dispatchEvent(new Event("auth-change"));
 
-          // 4. HARD REDIRECT: Ensuring the server picks up the new cookie
-          window.location.href = "/dashboard/create";
+          // --- 4. ROLE-BASED REDIRECTION LOGIC ---
+          const userRole = userData.role;
+
+          if (userRole === "admin") {
+            window.location.href = "/admin/dashboard"; // Admin direct control center mein
+          } else if (userRole === "author") {
+            window.location.href = "/dashboard/my-posts"; // Author apne posts ki list mein
+          } else {
+            window.location.href = "/"; // Reader seedha home page par
+          }
         } else {
           setError("Login successful, but no security token was received.");
         }
@@ -52,9 +62,7 @@ export default function LoginPage() {
         );
       }
     } catch (err) {
-      setError(
-        "Server connection failed. Please check your internet or database.",
-      );
+      setError("Server connection failed. Please check your internet.");
     } finally {
       setLoading(false);
     }
