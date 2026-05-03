@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import MaterialCard from "@/components/ui/MaterialCard";
 import { fileToBase64 } from "@/lib/file-to-base64";
 
-// RichTextEditor dynamic import for SSR safety
 const RichTextEditor = dynamic(
   () => import("@/components/editor/RichTextEditor"),
   {
@@ -23,7 +22,17 @@ export default function CreatePostPage() {
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isClient, setIsClient] = useState(false); // Fix for Next.js 16 Hydration
   const router = useRouter();
+
+  // Redirect if no session found & Set Client Mount
+  useEffect(() => {
+    setIsClient(true);
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/login");
+    }
+  }, [router]);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
@@ -37,20 +46,48 @@ export default function CreatePostPage() {
     setLoading(true);
     setError("");
 
+    if (typeof window === "undefined") return;
+
     const userString = localStorage.getItem("user");
     const token = localStorage.getItem("token");
-    const user = userString ? JSON.parse(userString) : null;
 
-    if (!user || !token) {
-      setError("Session expired. Please login again.");
+    if (!userString || !token) {
+      setError("Session expired or user not found. Please login again.");
       setLoading(false);
       return;
     }
 
     try {
+      // Step 1: Deep Parse User Object
+      let parsedUser;
+      try {
+        parsedUser = JSON.parse(userString);
+        // Handle double stringification
+        if (typeof parsedUser === "string") {
+          parsedUser = JSON.parse(parsedUser);
+        }
+      } catch (e) {
+        throw new Error("Invalid user session format.");
+      }
+
+      const authorId =
+        parsedUser._id ||
+        parsedUser.id ||
+        parsedUser.user?._id ||
+        parsedUser.user?.id ||
+        parsedUser.data?._id;
+
+      if (!authorId) {
+        setError(
+          "User ID not found in session. Please try logging out and in again.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Step 2: Image Upload
       let imageUrl = "";
       if (image) {
-        // IMAGE UPLOAD CALL
         const uploadRes = await fetch("/api/upload", {
           method: "POST",
           headers: {
@@ -59,22 +96,24 @@ export default function CreatePostPage() {
           },
           body: JSON.stringify({ image, folder: "posts" }),
         });
-        const uploadData = await uploadRes.json();
-        imageUrl = uploadData.data?.url || "";
+
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          imageUrl = uploadData.data?.url || "";
+        }
       }
 
-      // Generate Clean Slug
       const slug = title
         .toLowerCase()
         .trim()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)+/g, "");
 
-      // POST CREATION CALL - Headers fixed here
+      // Step 3: Final Post Call
       const postRes = await fetch("/api/post", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json", // YEH LAZMI HAI
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -82,51 +121,64 @@ export default function CreatePostPage() {
           content: content.trim(),
           coverImage: imageUrl,
           slug: slug,
-          author: user._id || user.id, // Backend checks this
+          author: authorId,
           status: "published",
         }),
       });
 
-      const result = await postRes.json();
+      // Step 4: Fix "Unexpected end of JSON input"
+      const responseText = await postRes.text();
+      if (!responseText) {
+        throw new Error(
+          "Server ne khali response bheja hai. Please check API route.",
+        );
+      }
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (err) {
+        throw new Error("Server returned invalid JSON. Check backend logs.");
+      }
 
       if (postRes.ok) {
         router.push("/");
         router.refresh();
       } else {
-        // Backend message will show here
-        setError(result.error || "Failed to publish.");
+        setError(result.error || "Publishing failed.");
       }
-    } catch (err) {
-      setError("Network error. Please check your connection.");
+    } catch (err: any) {
+      console.error("Submit Error:", err);
+      setError("Something went wrong: " + err.message);
     } finally {
       setLoading(false);
     }
   };
 
+  // Prevent Hydration Error
+  if (!isClient) return null;
+
   return (
-    <main className="min-h-screen bg-gray-50 p-8">
+    <main className="min-h-screen bg-gray-50 p-8 text-black">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-8 text-gray-900">
           Create New Post
         </h1>
-
         {error && (
           <div className="p-4 mb-6 bg-red-50 text-red-600 rounded-xl border border-red-200">
             {error}
           </div>
         )}
-
         <form onSubmit={handleSubmit} className="space-y-6">
           <MaterialCard>
             <input
               type="text"
               placeholder="Post Title"
-              className="w-full text-4xl font-bold bg-transparent border-b border-gray-200 focus:border-blue-600 outline-none py-4 mb-6"
+              className="w-full text-4xl font-bold bg-transparent border-b border-gray-200 focus:border-blue-600 outline-none py-4 mb-6 text-black"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
             />
-
             <div className="mb-6">
               <label className="block text-sm font-medium mb-2 text-gray-600">
                 Cover Image
@@ -145,9 +197,7 @@ export default function CreatePostPage() {
                 />
               )}
             </div>
-
             <RichTextEditor content={content} onChange={setContent} />
-
             <div className="mt-8 flex justify-end">
               <button
                 type="submit"

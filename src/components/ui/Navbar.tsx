@@ -14,8 +14,7 @@ export default function Navbar() {
 
   const handleLogout = () => {
     localStorage.clear();
-    router.push("/");
-    window.location.reload();
+    router.push("/logout");
   };
 
   return (
@@ -79,7 +78,7 @@ export default function Navbar() {
                 onClick={handleLogout}
                 className="text-[12px] font-medium text-gray-400 hover:text-red-500"
               >
-                Sign out
+                Log Out
               </button>
             </div>
           ) : (

@@ -1,10 +1,10 @@
 import connectDB from "@/lib/mongodb";
 import Post from "@/models/Post";
 import Comment from "@/models/Comment";
-import { successResponse, errorResponse } from "@/lib/api-response";
+import { errorResponse } from "@/lib/api-response";
 import { NextResponse } from "next/server";
 
-// --- GET METHOD (UNCHANGED) ---
+// GET METHOD
 export async function GET(req: Request) {
   try {
     await connectDB();
@@ -49,20 +49,24 @@ export async function GET(req: Request) {
   }
 }
 
-// --- FIXED POST METHOD ---
+// POST METHOD (REWRITTEN FOR BETTER DEBUGGING)
 export async function POST(req: Request) {
   try {
     await connectDB();
     const body = await req.json();
 
-    // Debugging: Terminal mein check karein ke data aa raha hai ya nahi
-    console.log("Payload received:", body);
+    // Field Check logic
+    const missingFields = [];
+    if (!body.title) missingFields.push("title");
+    if (!body.content) missingFields.push("content");
+    if (!body.slug) missingFields.push("slug");
+    if (!body.author) missingFields.push("author");
 
-    if (!body.title || !body.content || !body.slug || !body.author) {
+    if (missingFields.length > 0) {
       return NextResponse.json(
         {
           success: false,
-          error: "Missing required fields: Title, Content, Slug, or Author.",
+          error: `Missing fields: ${missingFields.join(", ")}`,
         },
         { status: 400 },
       );
@@ -71,21 +75,17 @@ export async function POST(req: Request) {
     const newPost = await Post.create(body);
 
     return NextResponse.json(
-      {
-        success: true,
-        data: newPost,
-        message: "Post created successfully",
-      },
+      { success: true, data: newPost, message: "Post created successfully" },
       { status: 201 },
     );
   } catch (error: any) {
     console.error("Create Post Error:", error);
     if (error.code === 11000) return errorResponse("Slug already exists", 400);
-    return errorResponse(error.message, 500);
+    return errorResponse(error.message || "Internal Server Error", 500);
   }
 }
 
-// --- PUT & DELETE (UNCHANGED) ---
+// PUT METHOD
 export async function PUT(req: Request) {
   try {
     await connectDB();
@@ -96,12 +96,13 @@ export async function PUT(req: Request) {
       { $set: updateData },
       { new: true },
     );
-    return successResponse(updatedPost, "Updated");
+    return NextResponse.json({ success: true, data: updatedPost });
   } catch (error: any) {
     return errorResponse(error.message, 500);
   }
 }
 
+// DELETE METHOD
 export async function DELETE(req: Request) {
   try {
     await connectDB();
@@ -109,7 +110,7 @@ export async function DELETE(req: Request) {
     const id = searchParams.get("id");
     await Post.findByIdAndDelete(id);
     await Comment.deleteMany({ post: id });
-    return successResponse(null, "Deleted");
+    return NextResponse.json({ success: true, message: "Deleted" });
   } catch (error: any) {
     return errorResponse(error.message, 500);
   }

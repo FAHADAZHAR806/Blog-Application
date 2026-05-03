@@ -140,7 +140,7 @@ export default function ProfessionalBlogPage({
             priority
           />
         )}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-gradient-to-t from-white via-transparent to-transparent">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6  ">
           <div className="max-w-4xl">
             <h1 className="text-4xl md:text-6xl font-black text-white mb-6 leading-tight drop-shadow-lg">
               {post.title}

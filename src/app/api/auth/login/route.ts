@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     );
 
     return successResponse(
-      { token, role: user.role, name: user.name },
+      { token, _id: user._id, role: user.role, name: user.name },
       "Login successful",
     );
   } catch (error: any) {
