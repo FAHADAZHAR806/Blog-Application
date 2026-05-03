@@ -1,16 +1,14 @@
 "use client";
 
-import { useEffect, useState, use } from "react"; // added use for params
+import { useEffect, useState, use } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import MaterialCard from "@/components/ui/MaterialCard";
 
 export default function ProfessionalBlogPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  // Next.js 15+ mein params ko 'use' hook se unwrap karna best practice hai
   const { slug } = use(params);
 
   const [post, setPost] = useState<any>(null);
@@ -19,34 +17,38 @@ export default function ProfessionalBlogPage({
   const [newComment, setNewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [liked, setLiked] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
       } catch (e) {
         console.error("User parse error");
       }
     }
 
-    const fetchPostAndComments = async () => {
+    const fetchPostAndData = async () => {
       if (!slug) return;
       try {
         const res = await fetch(`/api/post/${slug}`);
-
-        // Error handling for empty or non-ok responses
         if (!res.ok) throw new Error("Post not found");
+        const result = await res.json();
+        const postData = result.data;
 
-        const text = await res.text();
-        if (!text) throw new Error("Empty response from server");
+        setPost(postData);
 
-        const result = JSON.parse(text);
-        setPost(result.data);
+        if (storedUser) {
+          const u = JSON.parse(storedUser);
+          setLiked(postData.likes?.includes(u.id || u._id));
+        }
 
-        // Fetch comments only if post exists
-        if (result.data?._id) {
-          fetchComments(result.data._id);
+        const commentRes = await fetch(`/api/post/${slug}/comments`);
+        if (commentRes.ok) {
+          const commentResult = await commentRes.json();
+          setComments(commentResult.data || []);
         }
       } catch (err) {
         console.error("Fetch error:", err);
@@ -55,17 +57,33 @@ export default function ProfessionalBlogPage({
       }
     };
 
-    fetchPostAndComments();
+    fetchPostAndData();
   }, [slug]);
 
-  const fetchComments = async (postId: string) => {
+  const handleLike = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) return alert("Please login to like this post");
+    const token = localStorage.getItem("token");
+
     try {
-      const res = await fetch(`/api/post/${postId}/comments`);
-      if (!res.ok) return;
+      const res = await fetch(`/api/post/${slug}/like`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const result = await res.json();
-      setComments(result.data || []);
+      if (result.success) {
+        setLiked(result.data.liked);
+        setPost((prev: any) => ({
+          ...prev,
+          likes: result.data.liked
+            ? [...(prev.likes || []), user.id || user._id]
+            : prev.likes.filter((id: string) => id !== (user.id || user._id)),
+        }));
+      }
     } catch (err) {
-      console.error("Comments fetch error:", err);
+      console.error("Like failed");
     }
   };
 
@@ -77,7 +95,7 @@ export default function ProfessionalBlogPage({
     const token = localStorage.getItem("token");
 
     try {
-      const res = await fetch(`/api/post/${post._id}/comments`, {
+      const res = await fetch(`/api/post/${slug}/comments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -100,10 +118,11 @@ export default function ProfessionalBlogPage({
 
   if (loading)
     return (
-      <div className="min-h-screen flex items-center justify-center font-bold animate-pulse text-primary">
-        Loading Post...
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
+
   if (!post)
     return (
       <div className="p-20 text-center text-2xl font-bold">Post Not Found</div>
@@ -111,38 +130,29 @@ export default function ProfessionalBlogPage({
 
   return (
     <article className="min-h-screen bg-white pb-20">
-      {/* 1. Hero Section */}
-      <header className="relative w-full h-[60vh] md:h-[70vh] bg-black">
-        {post.coverImage ? (
+      <header className="relative w-full h-[65vh] bg-gray-900">
+        {post.coverImage && (
           <Image
             src={post.coverImage}
             alt={post.title}
             fill
-            className="object-cover opacity-80"
+            className="object-cover opacity-60"
             priority
           />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-r from-gray-800 to-gray-900" />
         )}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4 bg-gradient-to-t from-black/70 to-transparent">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-gradient-to-t from-white via-transparent to-transparent">
           <div className="max-w-4xl">
-            <span className="bg-primary text-white px-4 py-1 rounded-full text-sm font-bold tracking-widest uppercase mb-4 inline-block">
-              {post.category || "Lifestyle"}
-            </span>
-            <h1 className="text-4xl md:text-7xl font-black text-white mb-6 drop-shadow-2xl leading-tight">
+            <h1 className="text-4xl md:text-6xl font-black text-white mb-6 leading-tight drop-shadow-lg">
               {post.title}
             </h1>
-            <div className="flex items-center justify-center gap-4 text-gray-200 font-medium">
-              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center border border-white/30 text-white font-bold">
+            <div className="flex items-center justify-center gap-4 text-white/90 font-medium">
+              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center border-2 border-white text-sm font-bold">
                 {post.author?.name?.charAt(0)}
               </div>
-              <span>
-                By{" "}
-                <span className="text-white font-bold">
-                  {post.author?.name}
-                </span>
+              <span className="font-bold underline decoration-blue-500 underline-offset-4">
+                {post.author?.name}
               </span>
-              <span className="w-1 h-1 bg-white rounded-full" />
+              <span className="opacity-50">•</span>
               <span>
                 {new Date(post.createdAt).toLocaleDateString("en-US", {
                   month: "long",
@@ -155,94 +165,88 @@ export default function ProfessionalBlogPage({
         </div>
       </header>
 
-      {/* 2. Blog Content */}
-      <div className="max-w-3xl mx-auto px-6 py-16">
-        <p className="text-xl md:text-2xl text-gray-600 italic leading-relaxed mb-12 border-l-4 border-primary pl-6">
-          Everything you need to know about {post.title}.
-        </p>
+      <div className="max-w-3xl mx-auto px-6 py-12">
+        <div className="flex items-center justify-between py-6 border-y border-gray-100 mb-12">
+          <button
+            onClick={(e) => handleLike(e)}
+            className={`flex items-center gap-2 px-6 py-2 rounded-full transition-all border ${
+              liked
+                ? "bg-red-50 border-red-100 text-red-500"
+                : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-600"
+            }`}
+          >
+            <span className="text-xl">{liked ? "❤️" : "🤍"}</span>
+            <span className="font-bold">{post.likes?.length || 0}</span>
+          </button>
+          <div className="flex items-center gap-2 text-gray-400 font-medium">
+            <span>💬 {comments.length} Comments</span>
+          </div>
+        </div>
 
         <div
-          className="prose prose-lg md:prose-xl prose-headings:font-black prose-p:text-gray-700 mb-16"
+          className="prose prose-blue prose-lg md:prose-xl max-w-none mb-20 leading-relaxed text-gray-800"
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
 
-        {/* 3. Comments Section */}
-        <section className="mt-20 pt-10 border-t border-gray-200">
-          <h2 className="text-3xl font-black mb-8 text-gray-900">
-            Discussions ({comments.length})
+        <section className="mt-20">
+          <h2 className="text-3xl font-black mb-10 text-gray-900 flex items-center gap-3">
+            The Conversation{" "}
+            <span className="text-blue-600 text-lg font-medium">
+              ({comments.length})
+            </span>
           </h2>
 
           {user ? (
-            <div className="mb-12">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
-                  {user.name.charAt(0)}
-                </div>
-                <span className="font-bold text-gray-700">
-                  Commenting as {user.name}
-                </span>
-              </div>
+            <div className="mb-16 bg-gray-50 p-8 rounded-[2.5rem]">
               <form onSubmit={handlePostComment} className="space-y-4">
                 <textarea
-                  className="w-full p-6 rounded-3xl bg-gray-50 border-2 border-transparent focus:border-primary focus:bg-white outline-none transition-all h-32 shadow-inner"
-                  placeholder="Share your thoughts..."
+                  className="w-full p-6 rounded-3xl bg-white border border-gray-200 focus:border-blue-500 outline-none transition-all h-32 shadow-sm text-gray-800"
+                  placeholder="What are your thoughts?"
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   required
                 />
                 <button
                   disabled={submitting}
-                  className="bg-primary text-white px-10 py-3 rounded-full font-bold shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+                  className="bg-blue-600 text-white px-10 py-4 rounded-full font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all disabled:opacity-50"
                 >
-                  {submitting ? "Posting..." : "Post Comment"}
+                  {submitting ? "Publishing..." : "Post Thought"}
                 </button>
               </form>
             </div>
           ) : (
-            <div className="bg-gray-50 p-10 rounded-[2rem] text-center mb-12 border-2 border-dashed border-gray-200">
-              <p className="text-gray-600 mb-4 font-medium">
-                Join the discussion to share your perspective.
+            <div className="bg-blue-50 p-10 rounded-[2.5rem] text-center mb-16 border border-blue-100">
+              <p className="text-blue-900 mb-4 font-bold">
+                Sign in to join the discussion
               </p>
               <Link
                 href="/login"
-                className="inline-block bg-white border border-gray-300 px-6 py-2 rounded-full font-bold hover:bg-gray-100 transition-colors"
+                className="inline-block bg-blue-600 text-white px-8 py-3 rounded-full font-bold"
               >
-                Login to Comment
+                Login Now
               </Link>
             </div>
           )}
 
-          <div className="space-y-8">
-            {comments.length > 0 ? (
-              comments.map((c: any) => (
-                <div key={c._id} className="flex gap-4 group">
-                  <div className="w-12 h-12 rounded-full bg-gray-100 flex-shrink-0 flex items-center justify-center font-bold text-gray-600 border border-gray-200">
-                    {c.author?.name?.charAt(0)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="bg-gray-50 p-6 rounded-3xl rounded-tl-none group-hover:bg-gray-100/50 transition-colors">
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="font-bold text-gray-900">
-                          {c.author?.name}
-                        </span>
-                        <span className="text-xs text-gray-500 font-medium">
-                          {new Date(c.createdAt).toLocaleDateString(undefined, {
-                            dateStyle: "medium",
-                          })}
-                        </span>
-                      </div>
-                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        {c.content}
-                      </p>
-                    </div>
-                  </div>
+          <div className="space-y-10">
+            {comments.map((c: any) => (
+              <div key={c._id} className="flex gap-5">
+                <div className="w-12 h-12 rounded-2xl bg-gray-100 flex-shrink-0 flex items-center justify-center font-bold text-gray-500 border border-gray-200 uppercase">
+                  {c.author?.name?.charAt(0)}
                 </div>
-              ))
-            ) : (
-              <p className="text-center text-gray-400 py-10">
-                No comments yet. Be the first to start the conversation!
-              </p>
-            )}
+                <div className="flex-1 border-b border-gray-50 pb-8">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-extrabold text-gray-900">
+                      {c.author?.name}
+                    </span>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                      {new Date(c.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="text-gray-600 leading-relaxed">{c.content}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
       </div>

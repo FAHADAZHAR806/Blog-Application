@@ -3,31 +3,49 @@ import Post from "@/models/Post";
 import { withAuth } from "@/lib/middleware-utils";
 import { successResponse, errorResponse } from "@/lib/api-response";
 
-async function toggleLikeHandler(
-  req: Request,
-  user: any,
-  { params }: { params: { id: string } },
-) {
+async function toggleLikeHandler(req: Request, user: any, context: any) {
   try {
     await connectDB();
-    const postId = params.id;
 
-    // Find the post to check if user already liked it
-    const post = await Post.findById(postId);
+    const params = await context?.params;
+    const slug = params?.slug;
+
+    if (!slug) return errorResponse("Slug is missing", 400);
+
+    // 1. Find post by slug
+    const post = await Post.findOne({ slug });
     if (!post) return errorResponse("Post not found", 404);
 
-    const hasLiked = post.likes.includes(user.id);
+    const userId = user.id || user._id;
+    const hasLiked = post.likes.includes(userId);
+
+    let updatedPost;
 
     if (hasLiked) {
-      // Unlike: Remove user ID from the array
-      await Post.findByIdAndUpdate(postId, { $pull: { likes: user.id } });
-      return successResponse({ liked: false }, "Post unliked");
+      // 2. Unlike logic
+      updatedPost = await Post.findOneAndUpdate(
+        { slug },
+        { $pull: { likes: userId } },
+        { new: true },
+      );
     } else {
-      // Like: Add user ID to the array (ensuring no duplicates)
-      await Post.findByIdAndUpdate(postId, { $addToSet: { likes: user.id } });
-      return successResponse({ liked: true }, "Post liked");
+      // 3. Like logic
+      updatedPost = await Post.findOneAndUpdate(
+        { slug },
+        { $addToSet: { likes: userId } },
+        { new: true },
+      );
     }
-  } catch (error) {
+
+    return successResponse(
+      {
+        liked: !hasLiked,
+        count: updatedPost.likes.length,
+      },
+      hasLiked ? "Unliked" : "Liked",
+    );
+  } catch (error: any) {
+    console.error("Like Error:", error.message);
     return errorResponse("Action failed", 500);
   }
 }

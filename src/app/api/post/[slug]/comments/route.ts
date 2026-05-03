@@ -1,56 +1,60 @@
 import connectDB from "@/lib/mongodb";
 import Comment from "@/models/Comment";
+import Post from "@/models/Post"; // Post model zaroori hai slug check karne ke liye
 import { withAuth } from "@/lib/middleware-utils";
 import { successResponse, errorResponse } from "@/lib/api-response";
 
-// GET all comments for a specific post
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }, // Params is now a Promise
-) {
+async function commentHandler(req: Request, user: any, context: any) {
+  try {
+    const params = await context?.params;
+    const slug = params?.slug;
+
+    if (!slug) return errorResponse("Slug is missing", 400);
+
+    const { content } = await req.json();
+    if (!content) return errorResponse("Comment content is required", 400);
+
+    await connectDB();
+
+    // 1. Slug se Post dhoondein taake real ID mil sake
+    const post = await Post.findOne({ slug });
+    if (!post) return errorResponse("Post not found", 404);
+
+    // 2. Comment create karein using post._id
+    const comment = await Comment.create({
+      content,
+      author: user.id || user._id,
+      post: post._id,
+    });
+
+    const populatedComment = await Comment.findById(comment._id).populate(
+      "author",
+      "name profileImage",
+    );
+
+    return successResponse(populatedComment, "Comment added", 201);
+  } catch (error: any) {
+    console.error("Comment Error:", error.message);
+    return errorResponse(`Failed to add comment: ${error.message}`, 500);
+  }
+}
+
+export async function GET(req: Request, context: any) {
   try {
     await connectDB();
-    const { id } = await params; // Await the params
+    const params = await context.params;
+    const slug = params.slug;
 
-    const comments = await Comment.find({ post: id })
+    const post = await Post.findOne({ slug });
+    if (!post) return errorResponse("Post not found", 404);
+
+    const comments = await Comment.find({ post: post._id })
       .populate("author", "name profileImage")
       .sort({ createdAt: -1 });
 
     return successResponse(comments);
   } catch (error) {
     return errorResponse("Failed to fetch comments", 500);
-  }
-}
-
-// POST a new comment
-async function commentHandler(
-  req: Request,
-  user: any,
-  { params }: { params: Promise<{ id: string }> }, // Params is now a Promise
-) {
-  try {
-    const { id } = await params; // Await the params
-    const { content } = await req.json();
-
-    if (!content) return errorResponse("Comment content is required", 400);
-
-    await connectDB();
-    const comment = await Comment.create({
-      content,
-      author: user.id || user._id, // Safety check for ID field name
-      post: id,
-    });
-
-    // Created comment ko populate karke wapas bhejien taake foran UI par naam dikhe
-    const populatedComment = await comment.populate(
-      "author",
-      "name profileImage",
-    );
-
-    return successResponse(populatedComment, "Comment added", 201);
-  } catch (error) {
-    console.error("Comment Error:", error);
-    return errorResponse("Failed to add comment", 500);
   }
 }
 

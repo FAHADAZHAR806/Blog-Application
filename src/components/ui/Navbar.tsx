@@ -1,88 +1,104 @@
 "use client";
-
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 
 export default function Navbar() {
-  // Use null as initial state to prevent Next.js hydration flickering
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [user, setUser] = useState<any>(null);
   const router = useRouter();
 
   useEffect(() => {
-    // Function to check if the user is authenticated
-    const checkAuth = () => {
-      const token = localStorage.getItem("token");
-      setIsLoggedIn(!!token);
-    };
-
-    // 1. Check immediately when the component mounts
-    checkAuth();
-
-    // 2. Listen for 'storage' changes (works if login happens in another tab)
-    window.addEventListener("storage", checkAuth);
-
-    // 3. Listen for our custom 'auth-change' event (works for our Login page)
-    window.addEventListener("auth-change", checkAuth);
-
-    return () => {
-      window.removeEventListener("storage", checkAuth);
-      window.removeEventListener("auth-change", checkAuth);
-    };
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) setUser(JSON.parse(storedUser));
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setIsLoggedIn(false);
-
-    // Force a hard refresh to the home page to clear all states
-    window.location.href = "/login";
+    localStorage.clear();
+    router.push("/");
+    window.location.reload();
   };
 
-  // Don't render buttons until we know the auth status (prevents ghost buttons)
-  if (isLoggedIn === null)
-    return (
-      <nav className="bg-surface-container border-b border-surface-variant px-6 py-4 flex justify-between items-center sticky top-0 z-50">
-        <Link href="/" className="text-xl font-bold text-primary">
-          TactileBlog
-        </Link>
-      </nav>
-    );
-
   return (
-    <nav className="bg-surface-container border-b border-surface-variant px-6 py-4 flex justify-between items-center sticky top-0 z-50">
-      <Link
-        href="/"
-        className="text-xl font-bold text-primary hover:opacity-80 transition-opacity"
-      >
-        TactileBlog
-      </Link>
+    <nav className="h-16 border-b border-gray-200 bg-white sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
+        {/* Brand Name */}
+        <Link
+          href="/"
+          className="text-xl font-bold tracking-tight text-gray-900"
+        >
+          Lumina<span className="text-blue-600">.</span>
+        </Link>
 
-      <div className="flex gap-2 items-center">
-        {isLoggedIn ? (
-          <>
-            <Link
-              href="/dashboard/create"
-              className="text-sm font-bold text-primary px-5 py-2 hover:bg-primary/10 rounded-full transition-colors"
-            >
-              Write
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="text-sm font-bold text-red-600 px-5 py-2 hover:bg-red-50 rounded-full transition-colors"
-            >
-              Logout
-            </button>
-          </>
-        ) : (
+        <div className="flex items-center gap-6">
           <Link
-            href="/login"
-            className="bg-primary text-white px-8 py-2.5 rounded-full text-sm font-bold shadow-m3-1 hover:shadow-m3-2 active:scale-95 transition-all"
+            href="/"
+            className="text-[14px] font-medium text-gray-600 hover:text-black"
           >
-            Login
+            Explore
           </Link>
-        )}
+
+          {user ? (
+            <div className="flex items-center gap-5">
+              {/* Conditional Write Button */}
+              {(user.role === "author" || user.role === "admin") && (
+                <Link
+                  href="/dashboard/create"
+                  className="text-[13px] font-semibold bg-gray-900 text-white px-4 py-2 rounded-md hover:bg-gray-800 transition-all"
+                >
+                  Write
+                </Link>
+              )}
+
+              {/* User Identity */}
+              <div className="flex items-center gap-3 pl-4 border-l border-gray-100">
+                <div className="hidden sm:block text-right">
+                  <p className="text-[13px] font-semibold text-gray-900 leading-none">
+                    {user.name}
+                  </p>
+                  {user.role === "admin" ? (
+                    <Link
+                      href="/admin/dashboard"
+                      className="text-[10px] text-blue-600 font-bold hover:underline"
+                    >
+                      Admin Panel
+                    </Link>
+                  ) : (
+                    <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">
+                      {user.role}
+                    </p>
+                  )}
+                </div>
+
+                {/* Minimalist Profile Icon */}
+                <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-[12px] font-bold text-blue-600">
+                  {user.name?.charAt(0).toUpperCase()}
+                </div>
+              </div>
+
+              <button
+                onClick={handleLogout}
+                className="text-[12px] font-medium text-gray-400 hover:text-red-500"
+              >
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-4">
+              <Link
+                href="/login"
+                className="text-[14px] font-medium text-gray-600"
+              >
+                Login
+              </Link>
+              <Link
+                href="/register"
+                className="text-[14px] font-semibold bg-blue-600 text-white px-5 py-2 rounded-md hover:bg-blue-700 transition-all"
+              >
+                Get Started
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
     </nav>
   );
