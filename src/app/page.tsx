@@ -3,17 +3,23 @@ import Post from "@/models/Post";
 import MaterialCard from "@/components/ui/MaterialCard";
 import Link from "next/link";
 import User from "@/models/User";
-import Comment from "@/models/Comment"; // Engagement count ke liye
+import Comment from "@/models/Comment";
+import SearchInput from "@/components/ui/SearchInput"; // Ek naya client component (niche code diya hai)
 
-async function getPosts(page: number) {
+async function getPosts(page: number, query: string = "") {
   await connectDB();
-  const limit = 12; // Ek page par max 12 blogs
+  const limit = 12;
   const skip = (page - 1) * limit;
 
-  // Model registration fix
   if (!User.modelName) console.log("Registering model...");
 
-  const posts = await Post.find({ status: "published" })
+  // Search Filter: Agar query hai toh title mein search karega (case-insensitive)
+  const searchFilter = {
+    status: "published",
+    ...(query && { title: { $regex: query, $options: "i" } }),
+  };
+
+  const posts = await Post.find(searchFilter)
     .populate({
       path: "author",
       model: User,
@@ -24,9 +30,8 @@ async function getPosts(page: number) {
     .limit(limit)
     .lean();
 
-  const totalPosts = await Post.countDocuments({ status: "published" });
+  const totalPosts = await Post.countDocuments(searchFilter);
 
-  // Har post ke saath likes aur comments ka count merge karna
   const postsWithStats = await Promise.all(
     posts.map(async (post: any) => {
       const commentCount = await Comment.countDocuments({ post: post._id });
@@ -48,24 +53,42 @@ async function getPosts(page: number) {
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; q?: string }>;
 }) {
-  // Next.js 15+ mein searchParams promise hota hai
   const resolvedParams = await searchParams;
   const currentPage = Number(resolvedParams.page) || 1;
-  const { posts, totalPages } = await getPosts(currentPage);
+  const query = resolvedParams.q || ""; // URL se search query pakri
+  const { posts, totalPages } = await getPosts(currentPage, query);
 
   return (
     <main className="min-h-screen bg-[#F8F9FA] py-16 px-6 lg:px-12">
       <div className="max-w-7xl mx-auto">
-        <header className="mb-16 text-left">
-          <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6 tracking-tight">
-            Lumina <span className="text-blue-600">Feed.</span>
-          </h2>
-          <p className="text-gray-500 text-lg md:text-xl max-w-2xl font-medium leading-relaxed">
-            A minimalist space for high-quality thoughts. Explore insights from
-            our decentralized community.
-          </p>
+        <header className="mb-16 text-left flex flex-col md:flex-row md:items-end justify-between gap-8">
+          <div>
+            <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6 tracking-tight">
+              Lumina <span className="text-blue-600">Feed.</span>
+            </h2>
+            <p className="text-gray-500 text-lg md:text-xl max-w-2xl font-medium leading-relaxed">
+              A minimalist space for high-quality thoughts. Explore insights
+              from our decentralized community.
+            </p>
+          </div>
+
+          {/* Search Bar Implementation */}
+          <div className="w-full md:w-96">
+            <form action="/" method="GET" className="relative group">
+              <input
+                type="text"
+                name="q"
+                defaultValue={query}
+                placeholder="Search stories by title..."
+                className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-50 transition-all shadow-sm"
+              />
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl opacity-40">
+                🔍
+              </span>
+            </form>
+          </div>
         </header>
 
         {/* Grid Section */}
@@ -73,7 +96,7 @@ export default async function HomePage({
           {posts.length > 0 ? (
             posts.map((post: any) => (
               <Link
-                href={`/post/${post.slug}`}
+                href={`/pages/post/${post.slug}`}
                 key={post._id.toString()}
                 className="group"
               >
@@ -81,7 +104,6 @@ export default async function HomePage({
                   elevation={0}
                   className="h-full flex flex-col border border-gray-200 overflow-hidden hover:border-blue-200 transition-all duration-300 rounded-[2rem] bg-white shadow-sm hover:shadow-md"
                 >
-                  {/* Image Container */}
                   <div className="relative h-60 w-full overflow-hidden bg-gray-50">
                     <img
                       src={post.coverImage || "/placeholder-blog.jpg"}
@@ -95,7 +117,6 @@ export default async function HomePage({
                     </div>
                   </div>
 
-                  {/* Content Section */}
                   <div className="p-8 flex flex-col flex-grow">
                     <h2 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-blue-600 transition-colors line-clamp-2 leading-tight">
                       {post.title}
@@ -124,7 +145,6 @@ export default async function HomePage({
                         </div>
                       </div>
 
-                      {/* Engagement Icons */}
                       <div className="flex gap-3 text-gray-400">
                         <div className="flex items-center gap-1 text-[12px] font-semibold">
                           <span>❤️</span> <span>{post.likeCount}</span>
@@ -140,25 +160,27 @@ export default async function HomePage({
             ))
           ) : (
             <div className="col-span-full py-32 text-center bg-white rounded-[3rem] border border-gray-100 shadow-sm">
-              <div className="text-6xl mb-6">🖋️</div>
+              <div className="text-6xl mb-6">🔍</div>
               <p className="text-gray-500 text-xl font-semibold">
-                No stories found in the feed.
+                {query
+                  ? `No stories found for "${query}"`
+                  : "No stories found in the feed."}
               </p>
               <Link
-                href="/dashboard/new-post"
+                href="/"
                 className="text-blue-600 font-bold hover:underline mt-4 inline-block"
               >
-                Be the first to share your perspective
+                Clear search and see all stories
               </Link>
             </div>
           )}
         </div>
 
-        {/* Professional Pagination Buttons */}
+        {/* Professional Pagination Buttons (Updated for Search) */}
         {totalPages > 1 && (
           <div className="mt-20 flex items-center justify-center gap-6">
             <Link
-              href={`/?page=${currentPage - 1}`}
+              href={`/?page=${currentPage - 1}${query ? `&q=${query}` : ""}`}
               className={`px-8 py-3 rounded-full text-sm font-bold transition-all border ${
                 currentPage <= 1
                   ? "pointer-events-none opacity-20 border-gray-200"
@@ -174,7 +196,7 @@ export default async function HomePage({
             </span>
 
             <Link
-              href={`/?page=${currentPage + 1}`}
+              href={`/?page=${currentPage + 1}${query ? `&q=${query}` : ""}`}
               className={`px-8 py-3 rounded-full text-sm font-bold transition-all border ${
                 currentPage >= totalPages
                   ? "pointer-events-none opacity-20 border-gray-200"

@@ -133,7 +133,7 @@ export default function LoginPage() {
             <p className="text-sm text-secondary">
               Don't have an account?{" "}
               <Link
-                href="/register"
+                href="/pages/register"
                 className="text-primary font-bold hover:underline"
               >
                 Create one now

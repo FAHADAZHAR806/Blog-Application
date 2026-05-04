@@ -30,7 +30,7 @@ export default function CreatePostPage() {
     setIsClient(true);
     const token = localStorage.getItem("token");
     if (!token) {
-      router.push("/login");
+      router.push("/pages/login");
     }
   }, [router]);
 

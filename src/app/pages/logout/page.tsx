@@ -29,15 +29,14 @@ export default function LogoutSuccessPage() {
                 Logged Out!
               </h1>
               <p className="text-secondary text-base px-6">
-                Aap kamyabi se logout ho chuke hain. Session ko secure tareeke
-                se terminate kar diya gaya hai.
+                You have successfully logged out.
               </p>
             </div>
 
             {/* Action Buttons */}
             <div className="space-y-4 px-4">
               <Link
-                href="/login"
+                href="/pages/login"
                 className="flex items-center justify-center gap-2 w-full bg-primary text-white py-4 rounded-full font-bold shadow-m3-1 hover:shadow-m3-2 transform active:scale-[0.98] transition-all duration-200"
               >
                 <LogIn className="w-5 h-5" />

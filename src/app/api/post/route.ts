@@ -49,13 +49,12 @@ export async function GET(req: Request) {
   }
 }
 
-// POST METHOD (REWRITTEN FOR BETTER DEBUGGING)
+// POST METHOD
 export async function POST(req: Request) {
   try {
     await connectDB();
     const body = await req.json();
 
-    // Field Check logic
     const missingFields = [];
     if (!body.title) missingFields.push("title");
     if (!body.content) missingFields.push("content");
@@ -85,19 +84,44 @@ export async function POST(req: Request) {
   }
 }
 
-// PUT METHOD
+// PUT METHOD (Zaroori changes ke sath)
 export async function PUT(req: Request) {
   try {
     await connectDB();
     const body = await req.json();
     const { id, ...updateData } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Post ID is required" },
+        { status: 400 },
+      );
+    }
+
+    // 1. Check if post exists
+    const existingPost = await Post.findById(id);
+    if (!existingPost) {
+      return NextResponse.json(
+        { success: false, error: "Post not found" },
+        { status: 404 },
+      );
+    }
+
+    // 2. Update logic
     const updatedPost = await Post.findByIdAndUpdate(
       id,
       { $set: updateData },
-      { new: true },
+      { new: true, runValidators: true }, // validators on rakhein taake data theek save ho
     );
-    return NextResponse.json({ success: true, data: updatedPost });
+
+    return NextResponse.json({
+      success: true,
+      data: updatedPost,
+      message: "Post updated successfully",
+    });
   } catch (error: any) {
+    console.error("Update Error:", error);
+    if (error.code === 11000) return errorResponse("Slug already exists", 400);
     return errorResponse(error.message, 500);
   }
 }
@@ -108,9 +132,16 @@ export async function DELETE(req: Request) {
     await connectDB();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
+
+    if (!id) return errorResponse("ID is required", 400);
+
     await Post.findByIdAndDelete(id);
     await Comment.deleteMany({ post: id });
-    return NextResponse.json({ success: true, message: "Deleted" });
+
+    return NextResponse.json({
+      success: true,
+      message: "Post and its comments deleted",
+    });
   } catch (error: any) {
     return errorResponse(error.message, 500);
   }

@@ -11,7 +11,7 @@ export function middleware(request: NextRequest) {
 
   // Protect dashboard routes
   if (pathname.startsWith("/dashboard") && !token) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/pages/login", request.url));
   }
 
   return NextResponse.next();
