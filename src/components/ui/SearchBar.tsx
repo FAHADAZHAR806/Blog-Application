@@ -29,7 +29,7 @@ export default function SearchBar() {
       <div className="relative flex items-center">
         <input
           type="text"
-          placeholder="Search stories..."
+          placeholder="Search Blogs..."
           className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 border border-transparent rounded-2xl text-sm font-bold text-zinc-900 placeholder:text-zinc-400 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 transition-all outline-none"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

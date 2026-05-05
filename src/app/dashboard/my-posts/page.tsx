@@ -11,6 +11,7 @@ import {
   FileText,
   Calendar,
   Eye,
+  ArrowUpRight,
 } from "lucide-react";
 import MaterialCard from "@/components/ui/MaterialCard";
 
@@ -36,7 +37,7 @@ export default function MyPostsPage() {
           setPosts(myData);
         }
       } catch (err) {
-        console.error(err);
+        console.error("Dashboard Fetch Error:", err);
       } finally {
         setLoading(false);
       }
@@ -50,133 +51,142 @@ export default function MyPostsPage() {
       const res = await fetch(`/api/post?id=${id}`, { method: "DELETE" });
       if (res.ok) setPosts(posts.filter((p: any) => p._id !== id));
     } catch (err) {
-      console.error(err);
+      console.error("Delete Error:", err);
     }
   };
 
   if (loading)
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-12 h-12 animate-spin text-primary/50" />
+      <div className="flex flex-col items-center justify-center min-h-[80vh] bg-white">
+        <div className="w-12 h-12 border-[3px] border-black border-t-transparent rounded-full animate-spin" />
       </div>
     );
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-10 bg-[#FAFAFE] min-h-screen">
-      {/* Header Section */}
-      <div className="relative mb-12 p-8 rounded-[40px] bg-gradient-to-br from-primary/10 to-transparent overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div>
-            <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight mb-2">
-              My <span className="text-primary">Stories</span>
-            </h1>
-            <p className="text-gray-500 font-medium">
-              Manage, refine, and track your publications.
-            </p>
-          </div>
-          <Link
-            href="/dashboard/create"
-            className="group flex items-center gap-3 bg-gray-900 text-white px-8 py-4 rounded-3xl font-bold hover:bg-primary transition-all shadow-xl hover:shadow-primary/20 active:scale-95"
-          >
-            <Plus className="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" />
-            Create New
-          </Link>
+    <div className="max-w-6xl mx-auto p-6 md:p-12 bg-white min-h-screen selection:bg-zinc-100">
+      {/* Header: Editorial Style */}
+      <header className="mb-20 flex flex-col md:flex-row justify-between items-end gap-8 border-b border-zinc-50 pb-12">
+        <div className="max-w-xl">
+          <h1 className="text-5xl md:text-7xl font-black text-black tracking-tighter mb-4">
+            Archive <span className="text-zinc-200">/</span> 01
+          </h1>
+          <p className="text-zinc-400 text-xs font-black uppercase tracking-[0.3em]">
+            Manage your published narratives and creative insights.
+          </p>
         </div>
-        {/* Background Decorative Circle */}
-        <div className="absolute -right-10 -top-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl"></div>
-      </div>
+        <Link
+          href="/dashboard/create"
+          className="group flex items-center gap-4 bg-black text-white px-10 py-5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] hover:bg-zinc-800 transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-zinc-200"
+        >
+          <Plus
+            size={16}
+            strokeWidth={3}
+            className="group-hover:rotate-90 transition-transform"
+          />
+          Create New Story
+        </Link>
+      </header>
 
-      {/* Posts List */}
-      <div className="grid gap-8">
+      {/* Stories Grid */}
+      <div className="space-y-6">
         {posts.length === 0 ? (
-          <div className="text-center py-24 bg-white rounded-[40px] border border-gray-100 shadow-sm">
-            <div className="bg-gray-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FileText className="w-10 h-10 text-gray-300" />
+          <div className="text-center py-32 bg-zinc-50/50 rounded-[3rem] border border-dashed border-zinc-100">
+            <div className="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+              <FileText className="w-8 h-8 text-zinc-200" />
             </div>
-            <h3 className="text-xl font-bold text-gray-800">No stories yet</h3>
-            <p className="text-gray-500 mb-6">
-              Your creative journey starts here.
+            <h3 className="text-xs font-black uppercase tracking-widest text-zinc-900 mb-2">
+              No Stories Found
+            </h3>
+            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-8">
+              Begin your journey with the plus button above.
             </p>
           </div>
         ) : (
           posts.map((post: any) => (
             <div
               key={post._id}
-              className="group relative transition-all duration-300"
+              className="group relative transition-all duration-500"
             >
               <MaterialCard>
-                <div className="flex flex-col lg:flex-row gap-8 p-2">
-                  {/* Image with Overlay */}
-                  <div className="relative w-full lg:w-64 h-44 shrink-0 overflow-hidden rounded-[24px] bg-gray-100">
+                <div className="flex flex-col lg:flex-row gap-10 p-3">
+                  {/* Cinematic Thumbnail */}
+                  <div className="relative w-full lg:w-72 h-48 shrink-0 overflow-hidden rounded-[2.5rem] bg-zinc-50 border border-zinc-100">
                     {post.coverImage ? (
                       <img
                         src={post.coverImage}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        alt="cover"
+                        className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                        alt={post.title}
                       />
                     ) : (
-                      <div className="flex items-center justify-center h-full text-gray-400 font-bold">
-                        NO IMAGE
+                      <div className="flex items-center justify-center h-full text-[10px] font-black tracking-widest text-zinc-300">
+                        EMPTY CANVAS
                       </div>
                     )}
-                    <div className="absolute top-3 left-3 px-3 py-1 bg-white/90 backdrop-blur-md rounded-full shadow-sm">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-primary">
-                        {post.status || "Live"}
+                    <div className="absolute top-4 left-4 px-4 py-1.5 bg-white/90 backdrop-blur-xl rounded-full border border-white/20 shadow-sm">
+                      <span className="text-[8px] font-black uppercase tracking-widest text-black">
+                        {post.status || "Published"}
                       </span>
                     </div>
                   </div>
 
-                  {/* Content Area */}
+                  {/* Info Section */}
                   <div className="flex-1 flex flex-col justify-between py-2">
-                    <div>
-                      <h2 className="text-2xl font-extrabold text-gray-900 group-hover:text-primary transition-colors mb-3 line-clamp-2">
-                        {post.title}
-                      </h2>
-                      <div className="flex flex-wrap gap-5 text-gray-400">
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          <Calendar className="w-4 h-4" />
-                          {new Date(post.createdAt).toLocaleDateString(
-                            "en-US",
-                            { month: "short", day: "numeric" },
-                          )}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4 text-zinc-300">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar size={12} />
+                          <span className="text-[9px] font-black uppercase tracking-widest">
+                            {new Date(post.createdAt).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              },
+                            )}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          <Eye className="w-4 h-4" />
-                          {post.views || 0} Views
+                        <div className="w-1 h-1 rounded-full bg-zinc-200" />
+                        <div className="flex items-center gap-1.5">
+                          <Eye size={12} />
+                          <span className="text-[9px] font-black uppercase tracking-widest">
+                            {post.views || 0} Reads
+                          </span>
                         </div>
                       </div>
+                      <h2 className="text-3xl font-black text-black tracking-tighter leading-tight group-hover:text-zinc-600 transition-colors line-clamp-2">
+                        {post.title}
+                      </h2>
                     </div>
 
-                    {/* Action Bar */}
-                    <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-50">
-                      <div className="flex gap-2">
+                    {/* Action Toolbar */}
+                    <div className="flex items-center justify-between mt-10 pt-6 border-t border-zinc-50">
+                      <div className="flex gap-3">
                         <Link
                           href={`/dashboard/edit/${post._id}`}
-                          className="flex items-center gap-2 px-5 py-2.5 bg-blue-50 text-blue-700 rounded-2xl font-bold text-sm hover:bg-blue-600 hover:text-white transition-all active:scale-95"
+                          className="flex items-center gap-2 px-6 py-2.5 bg-zinc-50 text-black rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all"
                         >
-                          <Edit3 className="w-4 h-4" /> Edit
+                          <Edit3 size={12} /> Edit
                         </Link>
                         <button
                           onClick={() => handleDelete(post._id)}
-                          className="flex items-center gap-2 px-5 py-2.5 bg-red-50 text-red-600 rounded-2xl font-bold text-sm hover:bg-red-600 hover:text-white transition-all active:scale-95"
+                          className="flex items-center gap-2 px-6 py-2.5 bg-red-50/50 text-red-600 rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all"
                         >
-                          <Trash2 className="w-4 h-4" /> Delete
+                          <Trash2 size={12} /> Remove
                         </button>
                       </div>
 
                       <Link
-                        href={`/post/${post.slug}`}
-                        className="p-3 bg-gray-100 text-gray-600 rounded-2xl hover:bg-black hover:text-white transition-all"
-                        title="View Live Story"
+                        href={`/pages/post/${post.slug}`}
+                        target="_blank"
+                        className="w-11 h-11 bg-zinc-50 text-black rounded-full flex items-center justify-center hover:bg-black hover:text-white transition-all"
                       >
-                        <ExternalLink className="w-5 h-5" />
+                        <ArrowUpRight size={18} />
                       </Link>
                     </div>
                   </div>
                 </div>
               </MaterialCard>
-              {/* Subtle accent border on hover */}
-              <div className="absolute -inset-0.5 border-2 border-primary/0 group-hover:border-primary/10 rounded-[34px] -z-10 transition-all pointer-events-none"></div>
             </div>
           ))
         )}

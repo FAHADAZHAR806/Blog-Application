@@ -7,18 +7,23 @@ import { fileToBase64 } from "@/lib/file-to-base64";
 import {
   Sparkles,
   Loader2,
-  Wand2,
   X,
   ArrowLeft,
   Image as ImageIcon,
+  Zap,
 } from "lucide-react";
 
+// Rich Text Editor with a custom minimalist loader
 const RichTextEditor = dynamic(
   () => import("@/components/editor/RichTextEditor"),
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-[400px] bg-gray-50/50 animate-pulse rounded-3xl border border-gray-100" />
+      <div className="w-full h-[500px] bg-gray-50/30 animate-pulse rounded-[2rem] border border-dashed border-gray-100 flex items-center justify-center">
+        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-300">
+          Initializing Canvas...
+        </span>
+      </div>
     ),
   },
 );
@@ -54,7 +59,7 @@ export default function CreatePostPage() {
         setAiPrompt("");
       }
     } catch (err) {
-      console.error("AI Error");
+      console.error("AI Generation failed");
     } finally {
       setAiLoading(false);
     }
@@ -89,38 +94,43 @@ export default function CreatePostPage() {
 
       if (postRes.ok) router.push("/");
     } catch (err) {
-      alert("Error saving post");
+      alert("Error saving your masterpiece");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="min-h-screen bg-[#FAFAFA] text-zinc-900 selection:bg-zinc-200">
-      {/* Top Navigation - Floating Style */}
-      <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-zinc-100 px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+    <main className="min-h-screen bg-white text-zinc-900 selection:bg-blue-50 selection:text-blue-600">
+      {/* Top Professional Toolbar */}
+      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-2xl border-b border-gray-50 px-8 py-5">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-zinc-400 hover:text-zinc-900 transition-colors group"
+            className="group flex items-center gap-3 text-zinc-400 hover:text-black transition-all"
           >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            <span className="text-xs font-medium uppercase tracking-widest">
-              Back
+            <div className="p-2 rounded-full border border-transparent group-hover:border-gray-100 group-hover:bg-gray-50">
+              <ArrowLeft size={18} />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest">
+              Exit Studio
             </span>
           </button>
 
-          <div className="flex items-center gap-4">
-            <span className="hidden md:block text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-300">
-              Drafting Mode
-            </span>
+          <div className="flex items-center gap-6">
+            <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full bg-gray-50 border border-gray-100">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                Auto-Save Active
+              </span>
+            </div>
             <button
               onClick={handleSubmit}
               disabled={loading || !title}
-              className="bg-zinc-900 text-white px-8 py-2 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-zinc-800 disabled:opacity-20 transition-all shadow-xl shadow-zinc-200"
+              className="bg-black text-white px-10 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] hover:bg-zinc-800 disabled:opacity-10 transition-all hover:scale-105 active:scale-95"
             >
               {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin mx-auto" />
               ) : (
                 "Publish Story"
               )}
@@ -129,19 +139,19 @@ export default function CreatePostPage() {
         </div>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-6 pt-12 pb-24">
-        {/* AI Creative Assistant Section */}
-        <section className="mb-16">
-          <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-zinc-200 to-zinc-100 rounded-[2rem] blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-            <div className="relative bg-white border border-zinc-100 rounded-[1.5rem] p-2 flex items-center shadow-sm">
-              <div className="pl-4">
-                <Sparkles className="w-5 h-5 text-zinc-400" />
+      <div className="max-w-4xl mx-auto px-6 pt-16 pb-32">
+        {/* AI Co-Pilot Input */}
+        <section className="mb-20">
+          <div className="relative group max-w-2xl mx-auto">
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-100 to-purple-100 rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+            <div className="relative bg-white border border-gray-100 rounded-[2rem] p-1.5 flex items-center shadow-sm">
+              <div className="pl-5 text-blue-500">
+                <Sparkles size={20} strokeWidth={2.5} />
               </div>
               <input
                 type="text"
-                placeholder="What's on your mind? Let AI weave the story..."
-                className="flex-1 bg-transparent px-4 py-4 outline-none text-sm font-medium placeholder:text-zinc-300"
+                placeholder="Give me a theme, I'll write the rest..."
+                className="flex-1 bg-transparent px-5 py-4 outline-none text-sm font-bold placeholder:text-zinc-300"
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAIGenerate()}
@@ -149,46 +159,52 @@ export default function CreatePostPage() {
               <button
                 onClick={handleAIGenerate}
                 disabled={aiLoading || !aiPrompt}
-                className="bg-zinc-900 text-white px-6 py-3 rounded-[1.2rem] hover:scale-[0.98] active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                className="bg-gray-900 text-white p-4 rounded-[1.6rem] hover:bg-blue-600 transition-all disabled:opacity-20 flex items-center gap-2"
               >
                 {aiLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 size={18} className="animate-spin" />
                 ) : (
-                  <span className="text-[10px] font-bold uppercase tracking-widest">
-                    Generate
-                  </span>
+                  <Zap size={18} fill="white" />
                 )}
               </button>
             </div>
           </div>
         </section>
 
-        {/* Cinematic Cover Image */}
-        <section className="mb-12">
+        {/* Cinematic Media Area */}
+        <section className="mb-16">
           {image ? (
-            <div className="relative group h-[500px] rounded-[3rem] overflow-hidden shadow-2xl transition-all duration-700">
+            <div className="relative group h-[550px] rounded-[3.5rem] overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)]">
               <img
                 src={image}
-                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                className="w-full h-full object-cover transition-transform duration-[2s] group-hover:scale-110"
                 alt="Cover"
               />
-              <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
               <button
                 onClick={() => setImage(null)}
-                className="absolute top-8 right-8 bg-white/90 backdrop-blur-md p-3 rounded-full hover:bg-white hover:text-red-500 shadow-xl transition-all"
+                className="absolute top-10 right-10 bg-white/20 backdrop-blur-xl p-4 rounded-full text-white hover:bg-white hover:text-red-500 transition-all border border-white/20"
               >
-                <X className="w-5 h-5" />
+                <X size={20} strokeWidth={3} />
               </button>
             </div>
           ) : (
-            <label className="flex flex-col items-center justify-center w-full h-64 border border-dashed border-zinc-200 rounded-[3rem] cursor-pointer hover:bg-zinc-50 hover:border-zinc-400 transition-all group">
-              <div className="flex flex-col items-center gap-4 text-zinc-400 group-hover:text-zinc-900">
-                <div className="p-4 rounded-full bg-zinc-50 group-hover:bg-white shadow-sm transition-colors">
-                  <ImageIcon className="w-6 h-6" />
+            <label className="flex flex-col items-center justify-center w-full h-[400px] border-2 border-dashed border-gray-100 rounded-[3.5rem] cursor-pointer hover:bg-gray-50/50 hover:border-gray-300 transition-all group bg-gray-50/20">
+              <div className="flex flex-col items-center gap-6">
+                <div className="p-6 rounded-[2.5rem] bg-white shadow-xl shadow-gray-100 group-hover:scale-110 transition-transform">
+                  <ImageIcon
+                    size={32}
+                    className="text-zinc-200 group-hover:text-black transition-colors"
+                  />
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-[0.3em]">
-                  Cinematic Cover
-                </span>
+                <div className="text-center">
+                  <p className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-400 group-hover:text-black">
+                    Add Cinematic Cover
+                  </p>
+                  <p className="text-[9px] font-bold text-zinc-300 mt-2">
+                    Recommended: 16:9 High-Res
+                  </p>
+                </div>
               </div>
               <input
                 type="file"
@@ -202,15 +218,15 @@ export default function CreatePostPage() {
           )}
         </section>
 
-        {/* Content Section */}
-        <div className="space-y-6">
+        {/* Editor Canvas */}
+        <div className="space-y-10">
           <textarea
             rows={1}
-            placeholder="The Title of Your Masterpiece"
-            className="w-full text-5xl md:text-7xl font-bold bg-transparent border-none outline-none placeholder:text-zinc-100 tracking-tighter resize-none overflow-hidden"
+            placeholder="Title of your story..."
+            className="w-full text-2xl md:text-3xl font-black bg-transparent border-none outline-none placeholder:text-gray-100 tracking-[-0.05em] resize-none overflow-hidden leading-[0.9]"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            style={{ height: "auto" }}
+            style={{ height: "50px" }}
             onInput={(e) => {
               e.currentTarget.style.height = "auto";
               e.currentTarget.style.height =
@@ -218,21 +234,27 @@ export default function CreatePostPage() {
             }}
           />
 
-          <div className="flex items-center gap-6 py-6 border-y border-zinc-50">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                Live Editor
+          <div className="flex items-center gap-8 py-8 border-y border-gray-50">
+            <div className="flex flex-col">
+              <span className="text-[8px] font-black uppercase tracking-widest text-zinc-300 mb-1">
+                Metrics
+              </span>
+              <span className="text-[10px] font-black text-zinc-900">
+                {content.replace(/<[^>]*>/g, "").split(/\s+/).length} Words
               </span>
             </div>
-            <div className="h-4 w-[1px] bg-zinc-100" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-              {content.replace(/<[^>]*>/g, "").length} Characters
-            </span>
+            <div className="w-[1px] h-8 bg-gray-50" />
+            <div className="flex flex-col">
+              <span className="text-[8px] font-black uppercase tracking-widest text-zinc-300 mb-1">
+                Complexity
+              </span>
+              <span className="text-[10px] font-black text-zinc-900">
+                {content.length > 500 ? "In-depth" : "Quick Read"}
+              </span>
+            </div>
           </div>
 
-          {/* Fixed Rich Text Editor Container */}
-          <div className="prose prose-zinc prose-lg max-w-none pt-8">
+          <div className="prose prose-zinc prose-2xl max-w-none">
             <RichTextEditor
               content={content}
               onChange={(val: string) => setContent(val)}

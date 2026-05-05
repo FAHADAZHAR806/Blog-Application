@@ -3,6 +3,13 @@
 import { useEffect, useState, use } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import {
+  Heart,
+  MessageSquare,
+  ArrowLeft,
+  Share2,
+  MoreHorizontal,
+} from "lucide-react";
 
 export default function ProfessionalBlogPage({
   params,
@@ -10,7 +17,6 @@ export default function ProfessionalBlogPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = use(params);
-
   const [post, setPost] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [comments, setComments] = useState<any[]>([]);
@@ -23,8 +29,7 @@ export default function ProfessionalBlogPage({
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
+        setUser(JSON.parse(storedUser));
       } catch (e) {
         console.error("User parse error");
       }
@@ -37,7 +42,6 @@ export default function ProfessionalBlogPage({
         if (!res.ok) throw new Error("Post not found");
         const result = await res.json();
         const postData = result.data;
-
         setPost(postData);
 
         if (storedUser) {
@@ -56,17 +60,13 @@ export default function ProfessionalBlogPage({
         setLoading(false);
       }
     };
-
     fetchPostAndData();
   }, [slug]);
 
   const handleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-
     if (!user) return alert("Please login to like this post");
     const token = localStorage.getItem("token");
-
     try {
       const res = await fetch(`/api/post/${slug}/like`, {
         method: "POST",
@@ -90,10 +90,8 @@ export default function ProfessionalBlogPage({
   const handlePostComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim()) return;
-
     setSubmitting(true);
     const token = localStorage.getItem("token");
-
     try {
       const res = await fetch(`/api/post/${slug}/comments`, {
         method: "POST",
@@ -103,12 +101,7 @@ export default function ProfessionalBlogPage({
         },
         body: JSON.stringify({ content: newComment }),
       });
-
-      if (!res.ok) throw new Error("Failed to post");
-
       const result = await res.json();
-      // Yahan hum manually current logged-in user ka data add kar rahy hain
-      // taake post karte hi UI mein fresh data dikhay
       const commentWithAuthor = {
         ...result.data,
         author: {
@@ -120,7 +113,7 @@ export default function ProfessionalBlogPage({
       setComments((prev) => [commentWithAuthor, ...prev]);
       setNewComment("");
     } catch (err) {
-      alert("Failed to post comment. Make sure you are logged in.");
+      alert("Login required to comment.");
     } finally {
       setSubmitting(false);
     }
@@ -129,147 +122,182 @@ export default function ProfessionalBlogPage({
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-12 h-12 border-[3px] border-black border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
 
-  if (!post)
-    return (
-      <div className="p-20 text-center text-2xl font-bold">Post Not Found</div>
-    );
-
   return (
-    <article className="min-h-screen bg-white pb-20">
-      <header className="relative w-full h-[65vh] bg-gray-900">
-        {post.coverImage && (
-          <Image
-            src={post.coverImage}
-            alt={post.title}
-            fill
-            className="object-cover opacity-60"
-            priority
-          />
-        )}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6  ">
-          <div className="max-w-4xl">
-            <h1 className="text-4xl md:text-6xl font-black text-white mb-6 leading-tight drop-shadow-lg">
-              {post.title}
-            </h1>
-            <div className="flex items-center justify-center gap-4 text-white/90 font-medium">
-              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center border-2 border-white text-sm font-bold overflow-hidden">
-                {post.author?.profileImage ? (
-                  <img
-                    src={post.author.profileImage}
-                    alt={post.author.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  post.author?.name?.charAt(0)
-                )}
-              </div>
-              <span className="font-bold underline decoration-blue-500 underline-offset-4">
+    <article className="min-h-screen bg-white font-sans selection:bg-blue-100 selection:text-blue-900">
+      {/* Top Navigation Bar */}
+      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-50 px-6 py-4 flex justify-between items-center">
+        <Link
+          href="/"
+          className="flex items-center gap-2 font-black text-sm uppercase tracking-tighter hover:opacity-70 transition-all"
+        >
+          <ArrowLeft size={16} /> Back to Feed
+        </Link>
+        <div className="flex gap-4">
+          <Share2 size={18} className="cursor-pointer hover:text-blue-600" />
+          <MoreHorizontal size={18} className="cursor-pointer" />
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <header className="pt-24 pb-12 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center gap-3 mb-8">
+            <span className="bg-blue-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
+              Editorial
+            </span>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              {Math.ceil((post.content?.length || 0) / 1000)} min read
+            </span>
+          </div>
+
+          <h1 className="text-[clamp(2.5rem,5vw,5rem)] font-black leading-[0.95] tracking-[-0.04em] text-gray-900 mb-10">
+            {post.title}
+          </h1>
+
+          <div className="flex items-center gap-4 py-8 border-t border-gray-100">
+            <div className="w-14 h-14 rounded-full bg-gray-100 overflow-hidden border border-gray-100">
+              <img
+                src={
+                  post.author?.profileImage ||
+                  `https://ui-avatars.com/api/?name=${post.author?.name}`
+                }
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div>
+              <p className="font-black text-gray-900 text-lg leading-none">
                 {post.author?.name}
-              </span>
-              <span className="opacity-50">•</span>
-              <span>
+              </p>
+              <p className="text-gray-400 font-bold text-xs mt-1 uppercase tracking-tighter">
                 {new Date(post.createdAt).toLocaleDateString("en-US", {
                   month: "long",
                   day: "numeric",
                   year: "numeric",
                 })}
-              </span>
+              </p>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-3xl mx-auto px-6 py-12">
-        <div className="flex items-center justify-between py-6 border-y border-gray-100 mb-12">
-          <button
-            onClick={(e) => handleLike(e)}
-            className={`flex items-center gap-2 px-6 py-2 rounded-full transition-all border ${
-              liked
-                ? "bg-red-50 border-red-100 text-red-500"
-                : "bg-gray-50 border-gray-100 text-gray-400 hover:text-gray-600"
-            }`}
-          >
-            <span className="text-xl">{liked ? "❤️" : "🤍"}</span>
-            <span className="font-bold">{post.likes?.length || 0}</span>
-          </button>
-          <div className="flex items-center gap-2 text-gray-400 font-medium">
-            <span>💬 {comments.length} Comments</span>
+      {/* Cover Image */}
+      {post.coverImage && (
+        <div className="px-6 mb-20">
+          <div className="max-w-7xl mx-auto h-[70vh] relative rounded-[40px] overflow-hidden shadow-2xl">
+            <Image
+              src={post.coverImage}
+              alt={post.title}
+              fill
+              className="object-cover"
+              priority
+            />
           </div>
         </div>
+      )}
 
+      {/* Content Area */}
+      <div className="max-w-3xl mx-auto px-6">
         <div
-          className="prose prose-blue prose-lg md:prose-xl max-w-none mb-20 leading-relaxed text-gray-800"
+          className="prose prose-lg md:prose-2xl prose-headings:font-black prose-headings:tracking-tighter prose-p:text-gray-700 prose-p:leading-[1.8] prose-p:tracking-[-0.01em] max-w-none"
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
 
-        <section className="mt-20">
-          <h2 className="text-3xl font-black mb-10 text-gray-900 flex items-center gap-3">
-            The Conversation{" "}
-            <span className="text-blue-600 text-lg font-medium">
-              ({comments.length})
-            </span>
+        {/* Interaction Bar */}
+        <div className="flex items-center justify-between py-12 mt-20 border-t border-gray-100">
+          <div className="flex items-center gap-6">
+            <button
+              onClick={handleLike}
+              className="flex items-center gap-2 group transition-all"
+            >
+              <div
+                className={`p-3 rounded-full transition-all ${liked ? "bg-red-50 text-red-500" : "bg-gray-50 text-gray-400 group-hover:bg-gray-100"}`}
+              >
+                <Heart
+                  size={24}
+                  fill={liked ? "currentColor" : "none"}
+                  strokeWidth={2.5}
+                />
+              </div>
+              <span className="font-black text-xl">
+                {post.likes?.length || 0}
+              </span>
+            </button>
+            <div className="flex items-center gap-2 text-gray-400 font-black">
+              <MessageSquare size={24} strokeWidth={2.5} />
+              <span className="text-xl">{comments.length}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Conversation Section */}
+        <section className="pb-32">
+          <h2 className="text-4xl font-black tracking-tighter mb-12 text-gray-900">
+            The Discussion
           </h2>
 
           {user ? (
-            <div className="mb-16 bg-gray-50 p-8 rounded-[2.5rem]">
-              <form onSubmit={handlePostComment} className="space-y-4">
+            <div className="mb-20">
+              <form onSubmit={handlePostComment} className="relative">
                 <textarea
-                  className="w-full p-6 rounded-3xl bg-white border border-gray-200 focus:border-blue-500 outline-none transition-all h-32 shadow-sm text-gray-800"
-                  placeholder="What are your thoughts?"
+                  className="w-full p-8 rounded-[32px] bg-gray-50 border border-transparent focus:bg-white focus:border-blue-600 outline-none transition-all h-40 font-bold text-lg placeholder:text-gray-300"
+                  placeholder="Share your perspective..."
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   required
                 />
                 <button
                   disabled={submitting}
-                  className="bg-blue-600 text-white px-10 py-4 rounded-full font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all disabled:opacity-50"
+                  className="absolute bottom-6 right-6 bg-black text-white px-8 py-3 rounded-full font-black hover:bg-blue-600 transition-all active:scale-95 disabled:opacity-50"
                 >
-                  {submitting ? "Publishing..." : "Post Thought"}
+                  {submitting ? "..." : "Post Thought"}
                 </button>
               </form>
             </div>
           ) : (
-            <div className="bg-blue-50 p-10 rounded-[2.5rem] text-center mb-16 border border-blue-100">
-              <p className="text-blue-900 mb-4 font-bold">
-                Sign in to join the discussion
+            <div className="p-12 rounded-[40px] bg-gray-50 text-center mb-20 border-2 border-dashed border-gray-200">
+              <p className="font-black text-xl mb-6">
+                Login to join the conversation
               </p>
               <Link
-                href="/login"
-                className="inline-block bg-blue-600 text-white px-8 py-3 rounded-full font-bold"
+                href="/pages/login"
+                className="bg-black text-white px-10 py-4 rounded-full font-black"
               >
-                Login Now
+                Sign In
               </Link>
             </div>
           )}
 
-          <div className="space-y-10">
+          {/* Comments List */}
+          <div className="space-y-12">
             {comments.map((c: any) => (
-              <div key={c._id} className="flex gap-5">
-                <div className="w-12 h-12 rounded-2xl bg-gray-100 flex-shrink-0 flex items-center justify-center font-bold text-gray-500 border border-gray-200 uppercase overflow-hidden">
-                  {c.author?.profileImage ? (
-                    <img
-                      src={c.author.profileImage}
-                      alt={c.author.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    c.author?.name?.charAt(0)
-                  )}
+              <div key={c._id} className="flex gap-6 group">
+                <div className="w-14 h-14 rounded-2xl bg-gray-50 flex-shrink-0 overflow-hidden border border-gray-100">
+                  <img
+                    src={
+                      c.author?.profileImage ||
+                      `https://ui-avatars.com/api/?name=${c.author?.name}`
+                    }
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-                <div className="flex-1 border-b border-gray-50 pb-8">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-extrabold text-gray-900">
+                <div className="flex-1 border-b border-gray-50 pb-10">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="font-black text-gray-900 text-lg uppercase tracking-tight">
                       {c.author?.name}
                     </span>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">
                       {new Date(c.createdAt).toLocaleDateString()}
                     </span>
                   </div>
-                  <p className="text-gray-600 leading-relaxed">{c.content}</p>
+                  <p className="text-gray-600 text-lg leading-relaxed font-medium">
+                    {c.content}
+                  </p>
                 </div>
               </div>
             ))}

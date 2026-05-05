@@ -88,7 +88,7 @@ export default async function HomePage({
                 type="text"
                 name="q"
                 defaultValue={query}
-                placeholder="Search stories..."
+                placeholder="Search Blogs..."
                 className="w-full pl-14 pr-6 py-5 bg-white border border-zinc-200 rounded-[2rem] outline-none focus:border-blue-600 focus:ring-[6px] focus:ring-blue-50 transition-all duration-300 shadow-[0_4px_20px_rgba(0,0,0,0.03)]"
               />
               <span className="absolute left-6 top-1/2 -translate-y-1/2 grayscale group-focus-within:grayscale-0 transition-all">
