@@ -75,7 +75,7 @@ export default function MyPostsPage() {
             </p>
           </div>
           <Link
-            href="/create-post"
+            href="/dashboard/create"
             className="group flex items-center gap-3 bg-gray-900 text-white px-8 py-4 rounded-3xl font-bold hover:bg-primary transition-all shadow-xl hover:shadow-primary/20 active:scale-95"
           >
             <Plus className="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" />

@@ -107,7 +107,17 @@ export default function ProfessionalBlogPage({
       if (!res.ok) throw new Error("Failed to post");
 
       const result = await res.json();
-      setComments((prev) => [result.data, ...prev]);
+      // Yahan hum manually current logged-in user ka data add kar rahy hain
+      // taake post karte hi UI mein fresh data dikhay
+      const commentWithAuthor = {
+        ...result.data,
+        author: {
+          _id: user.id || user._id,
+          name: user.name,
+          profileImage: user.profileImage,
+        },
+      };
+      setComments((prev) => [commentWithAuthor, ...prev]);
       setNewComment("");
     } catch (err) {
       alert("Failed to post comment. Make sure you are logged in.");
@@ -146,8 +156,16 @@ export default function ProfessionalBlogPage({
               {post.title}
             </h1>
             <div className="flex items-center justify-center gap-4 text-white/90 font-medium">
-              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center border-2 border-white text-sm font-bold">
-                {post.author?.name?.charAt(0)}
+              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center border-2 border-white text-sm font-bold overflow-hidden">
+                {post.author?.profileImage ? (
+                  <img
+                    src={post.author.profileImage}
+                    alt={post.author.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  post.author?.name?.charAt(0)
+                )}
               </div>
               <span className="font-bold underline decoration-blue-500 underline-offset-4">
                 {post.author?.name}
@@ -231,8 +249,16 @@ export default function ProfessionalBlogPage({
           <div className="space-y-10">
             {comments.map((c: any) => (
               <div key={c._id} className="flex gap-5">
-                <div className="w-12 h-12 rounded-2xl bg-gray-100 flex-shrink-0 flex items-center justify-center font-bold text-gray-500 border border-gray-200 uppercase">
-                  {c.author?.name?.charAt(0)}
+                <div className="w-12 h-12 rounded-2xl bg-gray-100 flex-shrink-0 flex items-center justify-center font-bold text-gray-500 border border-gray-200 uppercase overflow-hidden">
+                  {c.author?.profileImage ? (
+                    <img
+                      src={c.author.profileImage}
+                      alt={c.author.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    c.author?.name?.charAt(0)
+                  )}
                 </div>
                 <div className="flex-1 border-b border-gray-50 pb-8">
                   <div className="flex justify-between items-center mb-2">

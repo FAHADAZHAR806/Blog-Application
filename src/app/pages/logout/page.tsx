@@ -2,65 +2,57 @@
 
 import Link from "next/link";
 import MaterialCard from "@/components/ui/MaterialCard";
-import { CheckCircle2, LogIn, Home } from "lucide-react"; // Modern Icons
+import { LogIn, Home, Check } from "lucide-react";
 
 export default function LogoutSuccessPage() {
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <MaterialCard elevation={2}>
-          <div className="text-center py-8">
-            {/* Animated Icon Section */}
-            <div className="flex justify-center mb-8">
-              <div className="relative flex items-center justify-center">
-                {/* Outer Glow Effect */}
-                <div className="absolute inset-0 bg-green-200 rounded-full blur-xl opacity-20 animate-pulse"></div>
-
-                {/* Icon Container */}
-                <div className="relative bg-white p-5 rounded-full border border-green-100 shadow-sm">
-                  <CheckCircle2 className="w-14 h-14 text-green-500 stroke-[1.5px]" />
-                </div>
-              </div>
-            </div>
-
-            {/* Content Section */}
-            <div className="space-y-3 mb-10">
-              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-                Logged Out!
-              </h1>
-              <p className="text-secondary text-base px-6">
-                You have successfully logged out.
-              </p>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="space-y-4 px-4">
-              <Link
-                href="/pages/login"
-                className="flex items-center justify-center gap-2 w-full bg-primary text-white py-4 rounded-full font-bold shadow-m3-1 hover:shadow-m3-2 transform active:scale-[0.98] transition-all duration-200"
-              >
-                <LogIn className="w-5 h-5" />
-                Sign In Again
-              </Link>
-
-              <Link
-                href="/"
-                className="flex items-center justify-center gap-2 w-full py-4 rounded-full font-semibold text-primary border border-surface-variant hover:bg-gray-50 transition-all duration-200"
-              >
-                <Home className="w-5 h-5" />
-                Back to Home
-              </Link>
-            </div>
-
-            {/* Security Note */}
-            <div className="mt-12 pt-6 border-t border-surface-variant flex items-center justify-center gap-2">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              <p className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-bold">
-                Session Terminated Securely
-              </p>
+    <div className="min-h-screen bg-[#FFFFFF] flex items-center justify-center p-6 font-sans">
+      <div className="w-full max-w-[420px] animate-in fade-in duration-700">
+        <MaterialCard
+          elevation={0}
+          className="border border-gray-100 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.05)] rounded-[40px] p-12 text-center"
+        >
+          {/* Subtle Success Indicator */}
+          <div className="flex justify-center mb-8">
+            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center border border-gray-100">
+              <Check className="w-8 h-8 text-blue-600 stroke-[3px]" />
             </div>
           </div>
+
+          {/* Header - Wix Bold Typography */}
+          <div className="space-y-4 mb-12">
+            <h1 className="text-[40px] font-black text-gray-900 tracking-tighter leading-none">
+              Signed Out
+            </h1>
+            <p className="text-gray-400 font-bold text-[14px] tracking-tight">
+              See you again soon.
+            </p>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="space-y-4">
+            <Link
+              href="/pages/login"
+              className="flex items-center justify-center gap-2 w-full bg-blue-600 text-white py-5 rounded-full font-black text-[16px] tracking-tight hover:bg-black transition-all active:scale-[0.97] shadow-xl shadow-blue-50"
+            >
+              <LogIn className="w-5 h-5" />
+              Sign In
+            </Link>
+
+            <Link
+              href="/"
+              className="flex items-center justify-center gap-2 w-full py-5 rounded-full font-black text-[16px] tracking-tight text-gray-900 bg-gray-50 hover:bg-gray-100 transition-all active:scale-[0.97]"
+            >
+              <Home className="w-5 h-5" />
+              Home
+            </Link>
+          </div>
         </MaterialCard>
+
+        {/* Simple Brand Tagline */}
+        <p className="text-center mt-10 text-[10px] font-black text-gray-300 uppercase tracking-[0.5em]">
+          LUMINA FEED
+        </p>
       </div>
     </div>
   );

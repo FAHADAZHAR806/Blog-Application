@@ -19,6 +19,7 @@ import {
   Heading1,
   Heading2,
   Strikethrough,
+  Highlighter,
 } from "lucide-react";
 
 interface Props {
@@ -29,9 +30,7 @@ export function Toolbar({ editor }: Props) {
   if (!editor) return null;
 
   const addImage = () => {
-    const url = window.prompt(
-      "Enter Image URL (from Cloudinary or elsewhere):",
-    );
+    const url = window.prompt("Enter Image URL (Cloudinary/Unsplash):");
     if (url) {
       editor.chain().focus().setImage({ src: url }).run();
     }
@@ -51,110 +50,128 @@ export function Toolbar({ editor }: Props) {
 
   const options = [
     {
-      icon: <Bold size={18} />,
+      icon: <Bold size={16} />,
       onClick: () => editor.chain().focus().toggleBold().run(),
       active: editor.isActive("bold"),
+      group: "text",
     },
     {
-      icon: <Italic size={18} />,
+      icon: <Italic size={16} />,
       onClick: () => editor.chain().focus().toggleItalic().run(),
       active: editor.isActive("italic"),
+      group: "text",
     },
     {
-      icon: <Underline size={18} />,
+      icon: <Underline size={16} />,
       onClick: () => editor.chain().focus().toggleUnderline().run(),
       active: editor.isActive("underline"),
+      group: "text",
     },
     {
-      icon: <Strikethrough size={18} />,
+      icon: <Strikethrough size={16} />,
       onClick: () => editor.chain().focus().toggleStrike().run(),
       active: editor.isActive("strike"),
+      group: "text",
     },
     {
-      icon: <Heading1 size={18} />,
+      icon: <Heading1 size={16} />,
       onClick: () => editor.chain().focus().toggleHeading({ level: 1 }).run(),
       active: editor.isActive("heading", { level: 1 }),
+      group: "format",
     },
     {
-      icon: <Heading2 size={18} />,
+      icon: <Heading2 size={16} />,
       onClick: () => editor.chain().focus().toggleHeading({ level: 2 }).run(),
       active: editor.isActive("heading", { level: 2 }),
+      group: "format",
     },
     {
-      icon: <List size={18} />,
+      icon: <List size={16} />,
       onClick: () => editor.chain().focus().toggleBulletList().run(),
       active: editor.isActive("bulletList"),
+      group: "list",
     },
     {
-      icon: <ListOrdered size={18} />,
+      icon: <ListOrdered size={16} />,
       onClick: () => editor.chain().focus().toggleOrderedList().run(),
       active: editor.isActive("orderedList"),
+      group: "list",
     },
     {
-      icon: <Quote size={18} />,
+      icon: <Quote size={16} />,
       onClick: () => editor.chain().focus().toggleBlockquote().run(),
       active: editor.isActive("blockquote"),
+      group: "extra",
     },
     {
-      icon: <AlignLeft size={18} />,
-      onClick: () => editor.chain().focus().setTextAlign("left").run(),
-      active: editor.isActive({ textAlign: "left" }),
-    },
-    {
-      icon: <AlignCenter size={18} />,
+      icon: <AlignCenter size={16} />,
       onClick: () => editor.chain().focus().setTextAlign("center").run(),
       active: editor.isActive({ textAlign: "center" }),
+      group: "align",
     },
     {
-      icon: <AlignRight size={18} />,
-      onClick: () => editor.chain().focus().setTextAlign("right").run(),
-      active: editor.isActive({ textAlign: "right" }),
-    },
-    {
-      icon: <LinkIcon size={18} />,
+      icon: <LinkIcon size={16} />,
       onClick: setLink,
       active: editor.isActive("link"),
+      group: "media",
     },
-    { icon: <ImageIcon size={18} />, onClick: addImage, active: false },
     {
-      icon: <Code size={18} />,
+      icon: <ImageIcon size={16} />,
+      onClick: addImage,
+      active: false,
+      group: "media",
+    },
+    {
+      icon: <Code size={16} />,
       onClick: () => editor.chain().focus().toggleCodeBlock().run(),
       active: editor.isActive("codeBlock"),
+      group: "extra",
     },
   ];
 
   return (
-    <div className="flex flex-wrap items-center gap-1 p-2 bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
-      {options.map((item, index) => (
-        <button
-          key={index}
-          onClick={(e) => {
-            e.preventDefault();
-            item.onClick();
-          }}
-          className={`p-2 rounded-md transition-all duration-200 ${
-            item.active
-              ? "bg-primary text-white shadow-sm"
-              : "text-gray-600 hover:bg-gray-200 hover:text-gray-900"
-          }`}
-        >
-          {item.icon}
-        </button>
-      ))}
+    <div className="flex flex-wrap items-center gap-1 p-3 md:px-10">
+      <div className="flex flex-wrap items-center gap-1 bg-white/50 p-1.5 rounded-2xl border border-zinc-100">
+        {options.map((item, index) => (
+          <button
+            key={index}
+            onClick={(e) => {
+              e.preventDefault();
+              item.onClick();
+            }}
+            title={item.group}
+            className={`p-2.5 rounded-xl transition-all duration-300 ${
+              item.active
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-200 scale-105"
+                : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+            }`}
+          >
+            {item.icon}
+          </button>
+        ))}
 
-      <div className="flex items-center gap-1 ml-auto border-l pl-2">
-        <button
-          onClick={() => editor.chain().focus().undo().run()}
-          className="p-2 text-gray-600 hover:bg-gray-200 rounded-md"
-        >
-          <Undo size={18} />
-        </button>
-        <button
-          onClick={() => editor.chain().focus().redo().run()}
-          className="p-2 text-gray-600 hover:bg-gray-200 rounded-md"
-        >
-          <Redo size={18} />
-        </button>
+        <div className="w-[1px] h-6 bg-zinc-200 mx-2 hidden sm:block" />
+
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              editor.chain().focus().undo().run();
+            }}
+            className="p-2.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 rounded-xl transition-all"
+          >
+            <Undo size={16} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              editor.chain().focus().redo().run();
+            }}
+            className="p-2.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 rounded-xl transition-all"
+          >
+            <Redo size={16} />
+          </button>
+        </div>
       </div>
     </div>
   );

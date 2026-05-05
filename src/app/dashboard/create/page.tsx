@@ -3,15 +3,22 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import MaterialCard from "@/components/ui/MaterialCard";
 import { fileToBase64 } from "@/lib/file-to-base64";
+import {
+  Sparkles,
+  Loader2,
+  Wand2,
+  X,
+  ArrowLeft,
+  Image as ImageIcon,
+} from "lucide-react";
 
 const RichTextEditor = dynamic(
   () => import("@/components/editor/RichTextEditor"),
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-[400px] bg-gray-100 animate-pulse rounded-xl" />
+      <div className="w-full h-[400px] bg-gray-50/50 animate-pulse rounded-3xl border border-gray-100" />
     ),
   },
 );
@@ -21,95 +28,46 @@ export default function CreatePostPage() {
   const [content, setContent] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [isClient, setIsClient] = useState(false); // Fix for Next.js 16 Hydration
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
   const router = useRouter();
 
-  // Redirect if no session found & Set Client Mount
   useEffect(() => {
-    setIsClient(true);
     const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/pages/login");
-    }
+    if (!token) router.push("/pages/login");
   }, [router]);
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      const base64 = await fileToBase64(e.target.files[0]);
-      setImage(base64);
+  const handleAIGenerate = async () => {
+    if (!aiPrompt) return;
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: aiPrompt }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setTitle(result.data.title);
+        setContent(result.data.content);
+        setImage(result.data.image);
+        setAiPrompt("");
+      }
+    } catch (err) {
+      console.error("AI Error");
+    } finally {
+      setAiLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    if (!title || !content) return;
     setLoading(true);
-    setError("");
-
-    if (typeof window === "undefined") return;
-
-    const userString = localStorage.getItem("user");
-    const token = localStorage.getItem("token");
-
-    if (!userString || !token) {
-      setError("Session expired or user not found. Please login again.");
-      setLoading(false);
-      return;
-    }
-
     try {
-      // Step 1: Deep Parse User Object
-      let parsedUser;
-      try {
-        parsedUser = JSON.parse(userString);
-        // Handle double stringification
-        if (typeof parsedUser === "string") {
-          parsedUser = JSON.parse(parsedUser);
-        }
-      } catch (e) {
-        throw new Error("Invalid user session format.");
-      }
+      const token = localStorage.getItem("token");
+      const userString = localStorage.getItem("user");
+      const parsedUser = JSON.parse(userString!);
 
-      const authorId =
-        parsedUser._id ||
-        parsedUser.id ||
-        parsedUser.user?._id ||
-        parsedUser.user?.id ||
-        parsedUser.data?._id;
-
-      if (!authorId) {
-        setError(
-          "User ID not found in session. Please try logging out and in again.",
-        );
-        setLoading(false);
-        return;
-      }
-
-      // Step 2: Image Upload
-      let imageUrl = "";
-      if (image) {
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ image, folder: "posts" }),
-        });
-
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          imageUrl = uploadData.data?.url || "";
-        }
-      }
-
-      const slug = title
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)+/g, "");
-
-      // Step 3: Final Post Call
       const postRes = await fetch("/api/post", {
         method: "POST",
         headers: {
@@ -119,96 +77,168 @@ export default function CreatePostPage() {
         body: JSON.stringify({
           title: title.trim(),
           content: content.trim(),
-          coverImage: imageUrl,
-          slug: slug,
-          author: authorId,
+          coverImage: image,
+          author: parsedUser._id || parsedUser.id,
           status: "published",
+          slug: title
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9]+/g, "-"),
         }),
       });
 
-      // Step 4: Fix "Unexpected end of JSON input"
-      const responseText = await postRes.text();
-      if (!responseText) {
-        throw new Error(
-          "Server ne khali response bheja hai. Please check API route.",
-        );
-      }
-
-      let result;
-      try {
-        result = JSON.parse(responseText);
-      } catch (err) {
-        throw new Error("Server returned invalid JSON. Check backend logs.");
-      }
-
-      if (postRes.ok) {
-        router.push("/");
-        router.refresh();
-      } else {
-        setError(result.error || "Publishing failed.");
-      }
-    } catch (err: any) {
-      console.error("Submit Error:", err);
-      setError("Something went wrong: " + err.message);
+      if (postRes.ok) router.push("/");
+    } catch (err) {
+      alert("Error saving post");
     } finally {
       setLoading(false);
     }
   };
 
-  // Prevent Hydration Error
-  if (!isClient) return null;
-
   return (
-    <main className="min-h-screen bg-gray-50 p-8 text-black">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8 text-gray-900">
-          Create New Post
-        </h1>
-        {error && (
-          <div className="p-4 mb-6 bg-red-50 text-red-600 rounded-xl border border-red-200">
-            {error}
-          </div>
-        )}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <MaterialCard>
-            <input
-              type="text"
-              placeholder="Post Title"
-              className="w-full text-4xl font-bold bg-transparent border-b border-gray-200 focus:border-blue-600 outline-none py-4 mb-6 text-black"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-            />
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2 text-gray-600">
-                Cover Image
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-600 file:text-white hover:file:opacity-90 cursor-pointer"
-              />
-              {image && (
-                <img
-                  src={image}
-                  className="mt-4 w-full h-48 object-cover rounded-xl border border-gray-100"
-                  alt="Preview"
-                />
+    <main className="min-h-screen bg-[#FAFAFA] text-zinc-900 selection:bg-zinc-200">
+      {/* Top Navigation - Floating Style */}
+      <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-zinc-100 px-6 py-4">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-zinc-400 hover:text-zinc-900 transition-colors group"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            <span className="text-xs font-medium uppercase tracking-widest">
+              Back
+            </span>
+          </button>
+
+          <div className="flex items-center gap-4">
+            <span className="hidden md:block text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-300">
+              Drafting Mode
+            </span>
+            <button
+              onClick={handleSubmit}
+              disabled={loading || !title}
+              className="bg-zinc-900 text-white px-8 py-2 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-zinc-800 disabled:opacity-20 transition-all shadow-xl shadow-zinc-200"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                "Publish Story"
               )}
-            </div>
-            <RichTextEditor content={content} onChange={setContent} />
-            <div className="mt-8 flex justify-end">
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-4xl mx-auto px-6 pt-12 pb-24">
+        {/* AI Creative Assistant Section */}
+        <section className="mb-16">
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-zinc-200 to-zinc-100 rounded-[2rem] blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+            <div className="relative bg-white border border-zinc-100 rounded-[1.5rem] p-2 flex items-center shadow-sm">
+              <div className="pl-4">
+                <Sparkles className="w-5 h-5 text-zinc-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="What's on your mind? Let AI weave the story..."
+                className="flex-1 bg-transparent px-4 py-4 outline-none text-sm font-medium placeholder:text-zinc-300"
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAIGenerate()}
+              />
               <button
-                type="submit"
-                disabled={loading}
-                className="bg-blue-600 text-white px-10 py-3 rounded-full font-bold shadow-lg hover:bg-blue-700 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
+                onClick={handleAIGenerate}
+                disabled={aiLoading || !aiPrompt}
+                className="bg-zinc-900 text-white px-6 py-3 rounded-[1.2rem] hover:scale-[0.98] active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
               >
-                {loading ? "Publishing..." : "Publish Post"}
+                {aiLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <span className="text-[10px] font-bold uppercase tracking-widest">
+                    Generate
+                  </span>
+                )}
               </button>
             </div>
-          </MaterialCard>
-        </form>
+          </div>
+        </section>
+
+        {/* Cinematic Cover Image */}
+        <section className="mb-12">
+          {image ? (
+            <div className="relative group h-[500px] rounded-[3rem] overflow-hidden shadow-2xl transition-all duration-700">
+              <img
+                src={image}
+                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                alt="Cover"
+              />
+              <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
+              <button
+                onClick={() => setImage(null)}
+                className="absolute top-8 right-8 bg-white/90 backdrop-blur-md p-3 rounded-full hover:bg-white hover:text-red-500 shadow-xl transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center justify-center w-full h-64 border border-dashed border-zinc-200 rounded-[3rem] cursor-pointer hover:bg-zinc-50 hover:border-zinc-400 transition-all group">
+              <div className="flex flex-col items-center gap-4 text-zinc-400 group-hover:text-zinc-900">
+                <div className="p-4 rounded-full bg-zinc-50 group-hover:bg-white shadow-sm transition-colors">
+                  <ImageIcon className="w-6 h-6" />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-[0.3em]">
+                  Cinematic Cover
+                </span>
+              </div>
+              <input
+                type="file"
+                className="hidden"
+                onChange={async (e) => {
+                  if (e.target.files?.[0])
+                    setImage(await fileToBase64(e.target.files[0]));
+                }}
+              />
+            </label>
+          )}
+        </section>
+
+        {/* Content Section */}
+        <div className="space-y-6">
+          <textarea
+            rows={1}
+            placeholder="The Title of Your Masterpiece"
+            className="w-full text-5xl md:text-7xl font-bold bg-transparent border-none outline-none placeholder:text-zinc-100 tracking-tighter resize-none overflow-hidden"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            style={{ height: "auto" }}
+            onInput={(e) => {
+              e.currentTarget.style.height = "auto";
+              e.currentTarget.style.height =
+                e.currentTarget.scrollHeight + "px";
+            }}
+          />
+
+          <div className="flex items-center gap-6 py-6 border-y border-zinc-50">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                Live Editor
+              </span>
+            </div>
+            <div className="h-4 w-[1px] bg-zinc-100" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+              {content.replace(/<[^>]*>/g, "").length} Characters
+            </span>
+          </div>
+
+          {/* Fixed Rich Text Editor Container */}
+          <div className="prose prose-zinc prose-lg max-w-none pt-8">
+            <RichTextEditor
+              content={content}
+              onChange={(val: string) => setContent(val)}
+            />
+          </div>
+        </div>
       </div>
     </main>
   );
