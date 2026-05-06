@@ -7,25 +7,35 @@ import { NextResponse } from "next/server";
 
 async function adminStatsHandler(req: Request, user: any) {
   if (user.role !== "admin") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Unauthorized access denied" },
+      { status: 403 },
+    );
   }
 
   try {
     await connectDB();
 
-    // 1. Basic Counts
+    // 1. Core Platform Metrics
     const totalUsers = await User.countDocuments();
     const totalPosts = await Post.countDocuments();
     const totalComments = await Comment.countDocuments();
 
-    // 2. Role Breakdown
-    const authorsCount = await User.countDocuments({ role: "author" });
-    const readersCount = await User.countDocuments({ role: "reader" });
+    // Calculate Global Likes (Platform-wide engagement)
+    const likesAggregation = await Post.aggregate([
+      {
+        $group: {
+          _id: null,
+          total: { $sum: { $size: { $ifNull: ["$likes", []] } } },
+        },
+      },
+    ]);
+    const totalLikes =
+      likesAggregation.length > 0 ? likesAggregation[0].total : 0;
 
-    // 3. Authors and their Engagement (Post count & Likes)
-    // Hum har author ke liye uski posts fetch kar rahe hain
-    const authorDirectory = await User.aggregate([
-      { $match: { role: "author" } },
+    // 2. Creator Performance (For the first table in UI)
+    const creatorPerformance = await User.aggregate([
+      { $match: { role: { $in: ["author", "admin"] } } },
       {
         $lookup: {
           from: "posts",
@@ -38,9 +48,9 @@ async function adminStatsHandler(req: Request, user: any) {
         $project: {
           name: 1,
           email: 1,
+          role: 1,
           postCount: { $size: "$posts" },
-          // Har post ke likes array ki length ka sum nikalna
-          totalLikesReceived: {
+          likesReceived: {
             $sum: {
               $map: {
                 input: "$posts",
@@ -51,9 +61,33 @@ async function adminStatsHandler(req: Request, user: any) {
           },
         },
       },
+      { $sort: { postCount: -1 } },
     ]);
 
-    // 4. All Users List for Directory
+    // 3. Reader Activity (For the second table in UI)
+    const readerPerformance = await User.aggregate([
+      { $match: { role: "reader" } },
+      {
+        $lookup: {
+          from: "comments",
+          localField: "_id",
+          foreignField: "author",
+          as: "writtenComments",
+        },
+      },
+      {
+        $project: {
+          name: 1,
+          email: 1,
+          role: 1,
+          commentsWritten: { $size: "$writtenComments" },
+          // Note: Likes given requires a deeper lookup if likes are just IDs in Post model
+          likesGiven: { $literal: 0 }, // Placeholder if tracking specific likes given is complex
+        },
+      },
+    ]);
+
+    // 4. Master User List (For Management Actions)
     const allUsers = await User.find()
       .select("-password")
       .sort({ createdAt: -1 });
@@ -64,10 +98,12 @@ async function adminStatsHandler(req: Request, user: any) {
         totalUsers,
         totalPosts,
         totalComments,
-        authorsCount,
-        readersCount,
+        totalLikes,
+        authorsCount: await User.countDocuments({ role: "author" }),
+        readersCount: await User.countDocuments({ role: "reader" }),
       },
-      authorDirectory,
+      creatorPerformance,
+      readerPerformance,
       users: allUsers,
     });
   } catch (error: any) {

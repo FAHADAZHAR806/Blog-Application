@@ -103,7 +103,7 @@ export default async function HomePage({
           {posts.length > 0 ? (
             posts.map((post: any) => (
               <Link
-                href={`/pages/post/${post.slug}`}
+                href={`/post/${post.slug}`}
                 key={post._id.toString()}
                 className="group flex flex-col h-full"
               >

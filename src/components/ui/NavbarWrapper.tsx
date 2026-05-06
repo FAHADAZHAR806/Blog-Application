@@ -8,8 +8,7 @@ export default function NavbarWrapper() {
   const pathname = usePathname();
 
   // Updated logic to match your folder structure (/pages/login, /pages/register)
-  const isAuthPage =
-    pathname === "/pages/login" || pathname === "/pages/register";
+  const isAuthPage = pathname === "/login" || pathname === "/register";
 
   if (isAuthPage) {
     return (

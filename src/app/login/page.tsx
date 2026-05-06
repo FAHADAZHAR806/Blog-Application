@@ -102,7 +102,7 @@ export default function LoginPage() {
                   Password
                 </label>
                 <Link
-                  href="/pages/forgot-password"
+                  href="/forgot-password"
                   className="text-[11px] font-black text-blue-600 uppercase tracking-widest hover:underline transition-all"
                 >
                   Forgot?
@@ -148,7 +148,7 @@ export default function LoginPage() {
             <p className="text-[13px] font-bold text-gray-400">
               New here?{" "}
               <Link
-                href="/pages/register"
+                href="/register"
                 className="text-blue-600 font-black hover:underline ml-1"
               >
                 Sign Up

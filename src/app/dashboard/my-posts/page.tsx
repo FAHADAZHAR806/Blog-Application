@@ -177,7 +177,7 @@ export default function MyPostsPage() {
                       </div>
 
                       <Link
-                        href={`/pages/post/${post.slug}`}
+                        href={`/post/${post.slug}`}
                         target="_blank"
                         className="w-11 h-11 bg-zinc-50 text-black rounded-full flex items-center justify-center hover:bg-black hover:text-white transition-all"
                       >

@@ -15,6 +15,7 @@ import {
   Camera,
   Loader2,
   CheckCircle,
+  ShieldCheck, // Admin icon ke liye
 } from "lucide-react";
 
 export default function Navbar() {
@@ -59,7 +60,7 @@ export default function Navbar() {
 
   const handleLogout = () => {
     localStorage.clear();
-    router.push("/pages/logout");
+    router.push("/logout");
     setIsOpen(false);
     setShowDropdown(false);
   };
@@ -122,6 +123,16 @@ export default function Navbar() {
 
           {user ? (
             <div className="flex items-center gap-5">
+              {/* --- ONLY ADMIN VIEW --- */}
+              {user.role === "admin" && (
+                <Link
+                  href="/admin/dashboard"
+                  className="text-[13px] font-semibold text-blue-600 flex items-center gap-1 hover:underline"
+                >
+                  <ShieldCheck className="w-4 h-4" /> Admin Panel
+                </Link>
+              )}
+
               {(user.role === "author" || user.role === "admin") && (
                 <>
                   <Link
@@ -192,13 +203,13 @@ export default function Navbar() {
           ) : (
             <div className="flex items-center gap-4">
               <Link
-                href="/pages/login"
+                href="/login"
                 className="text-[14px] font-medium text-gray-600"
               >
                 Login
               </Link>
               <Link
-                href="/pages/register"
+                href="/register"
                 className="text-[14px] font-semibold bg-blue-600 text-white px-5 py-2 rounded-md"
               >
                 Get Started
@@ -325,14 +336,15 @@ export default function Navbar() {
       <div
         className={`fixed top-0 right-0 h-full w-[280px] bg-white z-[70] shadow-2xl transform transition-transform duration-300 md:hidden ${isOpen ? "translate-x-0" : "translate-x-full"}`}
       >
-        <div className="p-6 flex flex-col h-full">
+        <div className="p-6 flex flex-col h-full overflow-y-auto pb-10">
+          {" "}
+          {/* pb-10 added here for bottom space */}
           <button
             onClick={() => setIsOpen(false)}
             className="self-end p-2 mb-4 text-gray-400"
           >
             <X className="w-6 h-6" />
           </button>
-
           {user && (
             <div className="mb-8 p-4 bg-blue-600 rounded-2xl text-white flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center font-black text-xl overflow-hidden">
@@ -353,7 +365,6 @@ export default function Navbar() {
               </div>
             </div>
           )}
-
           <div className="space-y-2 flex-1">
             <MobileLink
               href="/"
@@ -361,6 +372,17 @@ export default function Navbar() {
               label="Explore"
               onClick={() => setIsOpen(false)}
             />
+
+            {/* --- MOBILE ADMIN VIEW --- */}
+            {user && user.role === "admin" && (
+              <MobileLink
+                href="/admin/dashboard"
+                icon={<ShieldCheck className="w-5 h-5 text-blue-600" />}
+                label="Admin Dashboard"
+                onClick={() => setIsOpen(false)}
+              />
+            )}
+
             {user && (user.role === "author" || user.role === "admin") && (
               <>
                 <MobileLink
@@ -395,11 +417,10 @@ export default function Navbar() {
               </>
             )}
           </div>
-
           {user && (
             <button
               onClick={handleLogout}
-              className="mt-auto flex items-center justify-between p-4 bg-red-50 text-red-600 rounded-xl font-bold"
+              className="mt-8 flex items-center justify-between p-4 bg-red-50 text-red-600 rounded-xl font-bold"
             >
               <div className="flex items-center gap-3">
                 <LogOut className="w-5 h-5" /> <span>Logout</span>

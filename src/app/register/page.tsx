@@ -177,7 +177,7 @@ export default function RegisterPage() {
             <p className="text-[13px] font-bold text-gray-400">
               Already a member?{" "}
               <Link
-                href="/pages/login"
+                href="/login"
                 className="text-blue-600 font-black hover:underline ml-1"
               >
                 Sign In

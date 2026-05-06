@@ -32,7 +32,7 @@ export default function LogoutSuccessPage() {
           {/* Action Buttons */}
           <div className="space-y-4">
             <Link
-              href="/pages/login"
+              href="/login"
               className="flex items-center justify-center gap-2 w-full bg-blue-600 text-white py-5 rounded-full font-black text-[16px] tracking-tight hover:bg-black transition-all active:scale-[0.97] shadow-xl shadow-blue-50"
             >
               <LogIn className="w-5 h-5" />
