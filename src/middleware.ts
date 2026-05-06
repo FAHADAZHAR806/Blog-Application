@@ -1,6 +1,4 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/request";
-
+import { NextResponse, type NextRequest } from "next/server";
 /**
  * This runs on the "Edge". It checks the request before it even hits the page.
  * Useful for redirecting users away from protected UI routes.

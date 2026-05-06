@@ -1,13 +1,9 @@
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import NavbarWrapper from "@/components/ui/NavbarWrapper";
+import Footer from "@/components/ui/Footer"; // Footer Import kiya
 import { Suspense } from "react";
 
-/**
- * PERFORMANCE OPTIMIZATION:
- * We use 'variable' and 'display: swap' to prevent Layout Shift (CLS).
- * This ensures the page is readable even before the font fully loads.
- */
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700", "800", "900"],
@@ -35,32 +31,21 @@ export default function RootLayout({
           bg-[#FAFAFA] 
           text-zinc-900 
           antialiased 
-          selection:bg-zinc-200 
-          selection:text-zinc-900
+          min-h-screen
+          flex flex-col
         `}
       >
-        {/* 
-            WIX STRATEGY: 
-            Navbar is wrapped in a dedicated component. 
-            Ensure NavbarWrapper is a 'Client Component' but only 
-            handles its own internal state to avoid re-rendering the whole layout.
-        */}
         <NavbarWrapper />
 
-        {/* 
-            OPTIMIZATION: 
-            Using Suspense boundaries around 'children' allows Next.js 
-            to stream the page content, improving perceived speed.
+        {/* flex-grow ensures the main content pushes the footer down 
+            even if the page has very little content.
         */}
         <Suspense fallback={<div className="h-screen bg-[#FAFAFA]" />}>
-          <main className="min-h-screen relative">{children}</main>
+          <main className="flex-grow relative">{children}</main>
         </Suspense>
 
-        {/* 
-            DESIGN NOTE: 
-            In the Wix approach, we keep the DOM tree flat to improve 
-            rendering performance and CSS selector speed.
-        */}
+        {/* Footer Added Here */}
+        <Footer />
       </body>
     </html>
   );
