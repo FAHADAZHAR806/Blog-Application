@@ -15,7 +15,7 @@ import {
   Camera,
   Loader2,
   CheckCircle,
-  ShieldCheck, // Admin icon ke liye
+  ShieldCheck,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -123,7 +123,6 @@ export default function Navbar() {
 
           {user ? (
             <div className="flex items-center gap-5">
-              {/* --- ONLY ADMIN VIEW --- */}
               {user.role === "admin" && (
                 <Link
                   href="/admin/dashboard"
@@ -150,14 +149,13 @@ export default function Navbar() {
                 </>
               )}
 
-              {/* Profile Avatar & Dropdown */}
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
                   className="flex items-center gap-3 pl-4 border-l border-gray-100 group"
                 >
                   <div className="text-right">
-                    <p className="text-[13px] font-semibold text-gray-900 leading-none group-hover:text-blue-600 transition-colors">
+                    <p className="text-[13px] font-semibold text-gray-900 leading-none group-hover:text-blue-600">
                       {user.name}
                     </p>
                     <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">
@@ -184,17 +182,16 @@ export default function Navbar() {
                         setIsEditModalOpen(true);
                         setShowDropdown(false);
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 rounded-xl text-sm font-bold text-gray-700 transition-all"
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 rounded-xl text-sm font-bold text-gray-700"
                     >
-                      <Settings className="w-4 h-4 text-blue-600" />
-                      Edit Profile
+                      <Settings className="w-4 h-4 text-blue-600" /> Edit
+                      Profile
                     </button>
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 rounded-xl text-sm font-bold text-red-600 transition-all"
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 rounded-xl text-sm font-bold text-red-600"
                     >
-                      <LogOut className="w-4 h-4" />
-                      Log Out
+                      <LogOut className="w-4 h-4" /> Log Out
                     </button>
                   </div>
                 )}
@@ -233,11 +230,10 @@ export default function Navbar() {
           <div className="bg-white w-full max-w-md rounded-[40px] p-8 shadow-2xl relative overflow-hidden">
             <button
               onClick={() => setIsEditModalOpen(false)}
-              className="absolute top-6 right-6 p-2 bg-gray-50 rounded-full text-gray-400 hover:text-black transition-colors"
+              className="absolute top-6 right-6 p-2 bg-gray-50 rounded-full text-gray-400 hover:text-black"
             >
               <X className="w-5 h-5" />
             </button>
-
             <header className="mb-8 text-center">
               <h2 className="text-2xl font-black text-gray-900 tracking-tighter">
                 Edit <span className="text-blue-600">Profile</span>
@@ -246,7 +242,6 @@ export default function Navbar() {
                 Update your Lumina identity
               </p>
             </header>
-
             <div className="space-y-6">
               <div className="flex justify-center mb-8">
                 <div className="relative group">
@@ -271,7 +266,6 @@ export default function Navbar() {
                   </label>
                 </div>
               </div>
-
               <div className="space-y-4">
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 mb-2 block">
@@ -283,7 +277,7 @@ export default function Navbar() {
                     onChange={(e) =>
                       setEditData({ ...editData, name: e.target.value })
                     }
-                    className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-blue-600 outline-none font-bold transition-all text-sm"
+                    className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-blue-600 outline-none font-bold text-sm"
                   />
                 </div>
                 <div>
@@ -295,20 +289,15 @@ export default function Navbar() {
                     onChange={(e) =>
                       setEditData({ ...editData, bio: e.target.value })
                     }
-                    className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-blue-600 outline-none font-bold transition-all text-sm min-h-[100px] resize-none"
+                    className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-blue-600 outline-none font-bold text-sm min-h-[100px] resize-none"
                     placeholder="Tell us about yourself..."
                   />
                 </div>
               </div>
-
               <button
                 onClick={handleUpdateProfile}
                 disabled={loading}
-                className={`w-full py-5 rounded-[22px] font-black flex items-center justify-center gap-3 transition-all ${
-                  success
-                    ? "bg-emerald-500 text-white"
-                    : "bg-gray-900 text-white hover:bg-blue-600 active:scale-95"
-                }`}
+                className={`w-full py-5 rounded-[22px] font-black flex items-center justify-center gap-3 transition-all ${success ? "bg-emerald-500 text-white" : "bg-gray-900 text-white hover:bg-blue-600 active:scale-95"}`}
               >
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -337,66 +326,67 @@ export default function Navbar() {
         className={`fixed top-0 right-0 h-full w-[280px] bg-white z-[70] shadow-2xl transform transition-transform duration-300 md:hidden ${isOpen ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="p-6 flex flex-col h-full overflow-y-auto pb-10">
-          {" "}
-          {/* pb-10 added here for bottom space */}
           <button
             onClick={() => setIsOpen(false)}
             className="self-end p-2 mb-4 text-gray-400"
           >
             <X className="w-6 h-6" />
           </button>
-          {user && (
-            <div className="mb-8 p-4 bg-blue-600 rounded-2xl text-white flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center font-black text-xl overflow-hidden">
-                {user.profileImage ? (
-                  <img
-                    src={user.profileImage}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  user.name?.charAt(0).toUpperCase()
-                )}
-              </div>
-              <div>
-                <p className="font-bold leading-tight">{user.name}</p>
-                <p className="text-[10px] opacity-70 uppercase font-bold tracking-widest">
-                  {user.role}
-                </p>
-              </div>
-            </div>
-          )}
-          <div className="space-y-2 flex-1">
-            <MobileLink
-              href="/"
-              icon={<Compass className="w-5 h-5 text-blue-500" />}
-              label="Explore"
-              onClick={() => setIsOpen(false)}
-            />
 
-            {/* --- MOBILE ADMIN VIEW --- */}
-            {user && user.role === "admin" && (
-              <MobileLink
-                href="/admin/dashboard"
-                icon={<ShieldCheck className="w-5 h-5 text-blue-600" />}
-                label="Admin Dashboard"
-                onClick={() => setIsOpen(false)}
-              />
-            )}
-
-            {user && (user.role === "author" || user.role === "admin") && (
+          <div className="flex-1 space-y-2">
+            {user ? (
+              /* LOGGED IN USER SIDEBAR */
               <>
+                <div className="mb-8 p-4 bg-blue-600 rounded-2xl text-white flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center font-black text-xl overflow-hidden">
+                    {user.profileImage ? (
+                      <img
+                        src={user.profileImage}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      user.name?.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-bold leading-tight">{user.name}</p>
+                    <p className="text-[10px] opacity-70 uppercase font-bold tracking-widest">
+                      {user.role}
+                    </p>
+                  </div>
+                </div>
                 <MobileLink
-                  href="/dashboard/create"
-                  icon={<PenSquare className="w-5 h-5 text-emerald-500" />}
-                  label="Write Post"
+                  href="/"
+                  icon={<Compass className="w-5 h-5 text-blue-500" />}
+                  label="Explore"
                   onClick={() => setIsOpen(false)}
                 />
-                <MobileLink
-                  href="/dashboard/my-posts"
-                  icon={<LayoutDashboard className="w-5 h-5 text-purple-500" />}
-                  label="My Blogs"
-                  onClick={() => setIsOpen(false)}
-                />
+                {user.role === "admin" && (
+                  <MobileLink
+                    href="/admin/dashboard"
+                    icon={<ShieldCheck className="w-5 h-5 text-blue-600" />}
+                    label="Admin Panel"
+                    onClick={() => setIsOpen(false)}
+                  />
+                )}
+                {(user.role === "author" || user.role === "admin") && (
+                  <>
+                    <MobileLink
+                      href="/dashboard/create"
+                      icon={<PenSquare className="w-5 h-5 text-emerald-500" />}
+                      label="Write Post"
+                      onClick={() => setIsOpen(false)}
+                    />
+                    <MobileLink
+                      href="/dashboard/my-posts"
+                      icon={
+                        <LayoutDashboard className="w-5 h-5 text-purple-500" />
+                      }
+                      label="My Blogs"
+                      onClick={() => setIsOpen(false)}
+                    />
+                  </>
+                )}
                 <button
                   onClick={() => {
                     setIsEditModalOpen(true);
@@ -414,20 +404,44 @@ export default function Navbar() {
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-300" />
                 </button>
+                <button
+                  onClick={handleLogout}
+                  className="mt-8 flex items-center justify-between p-4 bg-red-50 text-red-600 rounded-xl font-bold w-full"
+                >
+                  <div className="flex items-center gap-3">
+                    <LogOut className="w-5 h-5" /> <span>Logout</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 opacity-40" />
+                </button>
+              </>
+            ) : (
+              /* READER / LOGGED OUT SIDEBAR */
+              <>
+                <MobileLink
+                  href="/"
+                  icon={<Compass className="w-5 h-5 text-blue-500" />}
+                  label="Explore"
+                  onClick={() => setIsOpen(false)}
+                />
+                <div className="mt-10 space-y-4">
+                  <Link
+                    href="/login"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center justify-center w-full py-4 bg-gray-50 text-gray-700 font-bold rounded-2xl hover:bg-gray-100 transition-all border border-gray-100"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/register"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center justify-center w-full py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
+                  >
+                    Get Started
+                  </Link>
+                </div>
               </>
             )}
           </div>
-          {user && (
-            <button
-              onClick={handleLogout}
-              className="mt-8 flex items-center justify-between p-4 bg-red-50 text-red-600 rounded-xl font-bold"
-            >
-              <div className="flex items-center gap-3">
-                <LogOut className="w-5 h-5" /> <span>Logout</span>
-              </div>
-              <ChevronRight className="w-4 h-4 opacity-40" />
-            </button>
-          )}
         </div>
       </div>
     </nav>

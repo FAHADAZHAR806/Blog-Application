@@ -264,7 +264,7 @@ export default function ProfessionalBlogPage({
                 Login to join the conversation
               </p>
               <Link
-                href="/pages/login"
+                href="/login"
                 className="bg-black text-white px-10 py-4 rounded-full font-black"
               >
                 Sign In
