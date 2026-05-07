@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/dbConnect"; // Aapka MongoDB connection helper
-import User from "@/models/User"; // Aapka User Model
+import dbConnect from "@/lib/mongodb";
+import User from "@/models/User";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
