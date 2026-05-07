@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { fileToBase64 } from "@/lib/file-to-base64";
 import {
   Sparkles,
@@ -13,7 +14,6 @@ import {
   Zap,
 } from "lucide-react";
 
-// Rich Text Editor with a custom minimalist loader
 const RichTextEditor = dynamic(
   () => import("@/components/editor/RichTextEditor"),
   {
@@ -42,7 +42,7 @@ export default function CreatePostPage() {
     if (!token) router.push("/pages/login");
   }, [router]);
 
-  const handleAIGenerate = async () => {
+  const handleAIGenerate = useCallback(async () => {
     if (!aiPrompt) return;
     setAiLoading(true);
     try {
@@ -58,20 +58,22 @@ export default function CreatePostPage() {
         setImage(result.data.image);
         setAiPrompt("");
       }
-    } catch (err) {
+    } catch {
       console.error("AI Generation failed");
     } finally {
       setAiLoading(false);
     }
-  };
+  }, [aiPrompt]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!title || !content) return;
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
       const userString = localStorage.getItem("user");
-      const parsedUser = JSON.parse(userString!);
+      // ✅ Safe parse — won't throw on null/corrupt data
+      const parsedUser = userString ? JSON.parse(userString) : null;
+      if (!parsedUser) return router.push("/pages/login");
 
       const postRes = await fetch("/api/post", {
         method: "POST",
@@ -85,20 +87,34 @@ export default function CreatePostPage() {
           coverImage: image,
           author: parsedUser._id || parsedUser.id,
           status: "published",
+          // ✅ More robust slug: strips leading/trailing dashes
           slug: title
             .toLowerCase()
             .trim()
-            .replace(/[^a-z0-9]+/g, "-"),
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, ""),
         }),
       });
 
       if (postRes.ok) router.push("/");
-    } catch (err) {
+    } catch {
       alert("Error saving your masterpiece");
     } finally {
       setLoading(false);
     }
-  };
+  }, [title, content, image, router]);
+
+  // ✅ Stable onChange for RichTextEditor — prevents unnecessary re-mounts
+  const handleContentChange = useCallback((val: string) => {
+    setContent(val);
+  }, []);
+
+  // ✅ Derived values — computed once per render, not inlined in JSX
+  const wordCount = content
+    .replace(/<[^>]*>/g, "")
+    .split(/\s+/)
+    .filter(Boolean).length;
+  const complexity = content.length > 500 ? "In-depth" : "Quick Read";
 
   return (
     <main className="min-h-screen bg-white text-zinc-900 selection:bg-blue-50 selection:text-blue-600">
@@ -113,7 +129,7 @@ export default function CreatePostPage() {
               <ArrowLeft size={18} />
             </div>
             <span className="text-[10px] font-black uppercase tracking-widest">
-              Exit Studio
+              Exit
             </span>
           </button>
 
@@ -121,7 +137,7 @@ export default function CreatePostPage() {
             <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full bg-gray-50 border border-gray-100">
               <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
               <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
-                Auto-Save Active
+                Auto-Save
               </span>
             </div>
             <button
@@ -143,7 +159,7 @@ export default function CreatePostPage() {
         {/* AI Co-Pilot Input */}
         <section className="mb-20">
           <div className="relative group max-w-2xl mx-auto">
-            <div className="absolute -inset-1 bg-gradient-to-r from-blue-100 to-purple-100 rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-100 to-purple-100 rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-1000" />
             <div className="relative bg-white border border-gray-100 rounded-[2rem] p-1.5 flex items-center shadow-sm">
               <div className="pl-5 text-blue-500">
                 <Sparkles size={20} strokeWidth={2.5} />
@@ -175,15 +191,18 @@ export default function CreatePostPage() {
         <section className="mb-16">
           {image ? (
             <div className="relative group h-[550px] rounded-[3.5rem] overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)]">
-              <img
+              {/* ✅ next/image replaces <img> */}
+              <Image
                 src={image}
-                className="w-full h-full object-cover transition-transform duration-[2s] group-hover:scale-110"
+                fill
+                sizes="(max-width: 768px) 100vw, 896px"
+                className="object-cover transition-transform duration-[2s] group-hover:scale-110"
                 alt="Cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
               <button
                 onClick={() => setImage(null)}
-                className="absolute top-10 right-10 bg-white/20 backdrop-blur-xl p-4 rounded-full text-white hover:bg-white hover:text-red-500 transition-all border border-white/20"
+                className="absolute top-10 right-10 z-10 bg-white/20 backdrop-blur-xl p-4 rounded-full text-white hover:bg-white hover:text-red-500 transition-all border border-white/20"
               >
                 <X size={20} strokeWidth={3} />
               </button>
@@ -208,6 +227,7 @@ export default function CreatePostPage() {
               </div>
               <input
                 type="file"
+                accept="image/*" // ✅ Restricts picker to images only
                 className="hidden"
                 onChange={async (e) => {
                   if (e.target.files?.[0])
@@ -239,8 +259,9 @@ export default function CreatePostPage() {
               <span className="text-[8px] font-black uppercase tracking-widest text-zinc-300 mb-1">
                 Metrics
               </span>
+              {/* ✅ Pre-computed derived value */}
               <span className="text-[10px] font-black text-zinc-900">
-                {content.replace(/<[^>]*>/g, "").split(/\s+/).length} Words
+                {wordCount} Words
               </span>
             </div>
             <div className="w-[1px] h-8 bg-gray-50" />
@@ -248,17 +269,16 @@ export default function CreatePostPage() {
               <span className="text-[8px] font-black uppercase tracking-widest text-zinc-300 mb-1">
                 Complexity
               </span>
+              {/* ✅ Pre-computed derived value */}
               <span className="text-[10px] font-black text-zinc-900">
-                {content.length > 500 ? "In-depth" : "Quick Read"}
+                {complexity}
               </span>
             </div>
           </div>
 
           <div className="prose prose-zinc prose-2xl max-w-none">
-            <RichTextEditor
-              content={content}
-              onChange={(val: string) => setContent(val)}
-            />
+            {/* ✅ Stable callback prevents RichTextEditor from re-mounting */}
+            <RichTextEditor content={content} onChange={handleContentChange} />
           </div>
         </div>
       </div>

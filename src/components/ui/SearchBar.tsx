@@ -13,10 +13,8 @@ export default function SearchBar() {
     e.preventDefault();
     if (query.trim()) {
       setIsSearching(true);
-      // Redirecting to search results page
       router.push(`/search?q=${encodeURIComponent(query.trim())}`);
 
-      // Reset loading state after a short delay or navigation
       setTimeout(() => setIsSearching(false), 2000);
     }
   };

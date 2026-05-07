@@ -68,9 +68,6 @@ export default function LoginPage() {
             <h1 className="text-[42px] font-black text-gray-900 tracking-tighter leading-none">
               Log In
             </h1>
-            <p className="text-gray-400 font-bold text-[13px] mt-4 tracking-wide uppercase">
-              Professional Access
-            </p>
           </div>
 
           {error && (
@@ -88,7 +85,7 @@ export default function LoginPage() {
               <input
                 type="email"
                 className="w-full p-5 rounded-[20px] bg-gray-50 border border-transparent focus:bg-white focus:border-blue-600 outline-none transition-all font-bold text-[15px]"
-                placeholder="email@example.com"
+                placeholder="Enter Your Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

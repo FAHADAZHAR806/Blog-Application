@@ -1,7 +1,7 @@
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import NavbarWrapper from "@/components/ui/NavbarWrapper";
-import Footer from "@/components/ui/Footer"; // Footer Import kiya
+import Footer from "@/components/ui/FooterWrapper";
 import { Suspense } from "react";
 
 const poppins = Poppins({
@@ -37,14 +37,10 @@ export default function RootLayout({
       >
         <NavbarWrapper />
 
-        {/* flex-grow ensures the main content pushes the footer down 
-            even if the page has very little content.
-        */}
         <Suspense fallback={<div className="h-screen bg-[#FAFAFA]" />}>
           <main className="flex-grow relative">{children}</main>
         </Suspense>
 
-        {/* Footer Added Here */}
         <Footer />
       </body>
     </html>

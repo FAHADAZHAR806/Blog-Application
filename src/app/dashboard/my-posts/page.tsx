@@ -1,22 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Edit3,
   Trash2,
-  ExternalLink,
   Loader2,
   Plus,
   FileText,
   Calendar,
   Eye,
   ArrowUpRight,
+  PenLine,
 } from "lucide-react";
 import MaterialCard from "@/components/ui/MaterialCard";
 
 export default function MyPostsPage() {
-  const [posts, setPosts] = useState([]);
+  const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,15 +28,11 @@ export default function MyPostsPage() {
         const user = JSON.parse(userData);
         const userId = user.id || user._id;
 
-        const res = await fetch("/api/post?adminView=true");
+        // ✅ Fetch only this user's posts directly — no client-side filtering
+        const res = await fetch(`/api/post?author=${userId}&adminView=true`);
         const json = await res.json();
 
-        if (json.success) {
-          const myData = json.data.filter(
-            (post: any) => (post.author?._id || post.author) === userId,
-          );
-          setPosts(myData);
-        }
+        if (json.success) setPosts(json.data);
       } catch (err) {
         console.error("Dashboard Fetch Error:", err);
       } finally {
@@ -45,15 +42,16 @@ export default function MyPostsPage() {
     fetchMyPosts();
   }, []);
 
-  const handleDelete = async (id: string) => {
+  // ✅ useCallback: stable reference, no recreation on every render
+  const handleDelete = useCallback(async (id: string) => {
     if (!confirm("Are you sure you want to delete this story?")) return;
     try {
       const res = await fetch(`/api/post?id=${id}`, { method: "DELETE" });
-      if (res.ok) setPosts(posts.filter((p: any) => p._id !== id));
+      if (res.ok) setPosts((prev) => prev.filter((p) => p._id !== id));
     } catch (err) {
       console.error("Delete Error:", err);
     }
-  };
+  }, []);
 
   if (loading)
     return (
@@ -64,42 +62,82 @@ export default function MyPostsPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-6 md:p-12 bg-white min-h-screen selection:bg-zinc-100">
-      {/* Header: Editorial Style */}
-      <header className="mb-20 flex flex-col md:flex-row justify-between items-end gap-8 border-b border-zinc-50 pb-12">
-        <div className="max-w-xl">
-          <h1 className="text-5xl md:text-7xl font-black text-black tracking-tighter mb-4">
-            Archive <span className="text-zinc-200">/</span> 01
-          </h1>
-          <p className="text-zinc-400 text-xs font-black uppercase tracking-[0.3em]">
-            Manage your published narratives and creative insights.
-          </p>
+      {/* ✅ Header: replaced "Archive / 01" with a distinctive studio-style header */}
+      <header className="mb-20 pb-12 border-b border-zinc-50">
+        <div className="flex flex-col md:flex-row justify-between items-end gap-8">
+          <div className="max-w-xl space-y-5">
+            {/* ✅ Eyebrow label — replaces the generic "Archive" */}
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-[2px] bg-blue-500" />
+              <span className="text-[9px] font-black uppercase tracking-[0.4em] text-blue-500">
+                Your Creative Studio
+              </span>
+            </div>
+
+            {/* ✅ Unique split headline with accent glyph */}
+            <h3 className="text-3xl md:text-5xl font-black text-black tracking-tighter leading-[0.9]">
+              Total Stories
+              <br />
+            </h3>
+
+            {/* ✅ Stat strip — shows live post count */}
+            <div className="flex items-center gap-6 pt-2">
+              <div className="flex flex-col">
+                <span className="text-2xl font-black text-black">
+                  {posts.length}
+                </span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                  {posts.length === 1 ? "Story" : "Stories"} Published
+                </span>
+              </div>
+              <div className="w-[1px] h-10 bg-zinc-100" />
+              <div className="flex flex-col">
+                <span className="text-2xl font-black text-black">
+                  {posts
+                    .reduce((acc: number, p: any) => acc + (p.views || 0), 0)
+                    .toLocaleString()}
+                </span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                  Total Reads
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <Link
+            href="/dashboard/create"
+            className="group flex items-center gap-4 bg-black text-white px-10 py-5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] hover:bg-zinc-800 transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-zinc-200"
+          >
+            <Plus
+              size={16}
+              strokeWidth={3}
+              className="group-hover:rotate-90 transition-transform duration-300"
+            />
+            Create New Story
+          </Link>
         </div>
-        <Link
-          href="/dashboard/create"
-          className="group flex items-center gap-4 bg-black text-white px-10 py-5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] hover:bg-zinc-800 transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-zinc-200"
-        >
-          <Plus
-            size={16}
-            strokeWidth={3}
-            className="group-hover:rotate-90 transition-transform"
-          />
-          Create New Story
-        </Link>
       </header>
 
       {/* Stories Grid */}
       <div className="space-y-6">
         {posts.length === 0 ? (
+          // ✅ Empty state: more evocative, matches new Studio theme
           <div className="text-center py-32 bg-zinc-50/50 rounded-[3rem] border border-dashed border-zinc-100">
-            <div className="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-              <FileText className="w-8 h-8 text-zinc-200" />
+            <div className="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-zinc-50">
+              <PenLine className="w-8 h-8 text-zinc-200" />
             </div>
             <h3 className="text-xs font-black uppercase tracking-widest text-zinc-900 mb-2">
-              No Stories Found
+              The Canvas Awaits
             </h3>
             <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-8">
-              Begin your journey with the plus button above.
+              Your first story is one click away.
             </p>
+            <Link
+              href="/dashboard/create"
+              className="inline-flex items-center gap-2 px-8 py-3 bg-black text-white rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-zinc-800 transition-all"
+            >
+              <Plus size={12} strokeWidth={3} /> Start Writing
+            </Link>
           </div>
         ) : (
           posts.map((post: any) => (
@@ -112,9 +150,12 @@ export default function MyPostsPage() {
                   {/* Cinematic Thumbnail */}
                   <div className="relative w-full lg:w-72 h-48 shrink-0 overflow-hidden rounded-[2.5rem] bg-zinc-50 border border-zinc-100">
                     {post.coverImage ? (
-                      <img
+                      // ✅ next/image replaces <img>
+                      <Image
                         src={post.coverImage}
-                        className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                        fill
+                        sizes="(max-width: 1024px) 100vw, 288px"
+                        className="object-cover transition-transform duration-1000 group-hover:scale-110"
                         alt={post.title}
                       />
                     ) : (
@@ -122,7 +163,7 @@ export default function MyPostsPage() {
                         EMPTY CANVAS
                       </div>
                     )}
-                    <div className="absolute top-4 left-4 px-4 py-1.5 bg-white/90 backdrop-blur-xl rounded-full border border-white/20 shadow-sm">
+                    <div className="absolute top-4 left-4 z-10 px-4 py-1.5 bg-white/90 backdrop-blur-xl rounded-full border border-white/20 shadow-sm">
                       <span className="text-[8px] font-black uppercase tracking-widest text-black">
                         {post.status || "Published"}
                       </span>

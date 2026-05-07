@@ -76,7 +76,7 @@ export default function RegisterPage() {
               <input
                 type="text"
                 className="w-full p-5 rounded-[20px] bg-gray-50 border border-transparent focus:bg-white focus:border-blue-600 outline-none transition-all font-bold text-[15px]"
-                placeholder="Your Name"
+                placeholder="Enter Your Name"
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
@@ -92,7 +92,7 @@ export default function RegisterPage() {
               <input
                 type="email"
                 className="w-full p-5 rounded-[20px] bg-gray-50 border border-transparent focus:bg-white focus:border-blue-600 outline-none transition-all font-bold text-[15px]"
-                placeholder="name@example.com"
+                placeholder="Enter Your Email"
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
@@ -187,7 +187,7 @@ export default function RegisterPage() {
         </MaterialCard>
 
         <p className="text-center mt-8 text-[10px] font-black text-gray-300 uppercase tracking-[0.4em]">
-          LUMINA PLATFORM
+          LUMINA SECURE
         </p>
       </div>
     </div>

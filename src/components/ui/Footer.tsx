@@ -1,11 +1,5 @@
 import Link from "next/link";
-import {
-  X, // Twitter ki jagah
-  Camera, // Instagram ki jagah
-  GitBranch,
-  Heart,
-  ArrowUpRight,
-} from "lucide-react";
+import { X, Camera, GitBranch, Heart, ArrowUpRight } from "lucide-react";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();

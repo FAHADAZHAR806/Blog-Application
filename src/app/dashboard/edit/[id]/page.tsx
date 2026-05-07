@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useCallback } from "react"; // ✅ useCallback
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import Image from "next/image"; // ✅ next/image
 import { fileToBase64 } from "@/lib/file-to-base64";
-import { ImagePlus, Save, ArrowLeft, Loader2, X, Sparkles } from "lucide-react";
+import { ImagePlus, Save, ArrowLeft, Loader2, X } from "lucide-react";
 import Link from "next/link";
 
-// Rich Text Editor with premium loader
 const RichTextEditor = dynamic(
   () => import("@/components/editor/RichTextEditor"),
   {
@@ -40,22 +40,20 @@ export default function EditPost({
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        // Fetching specific post for editing
-        const res = await fetch(`/api/post`);
+        // ✅ Fetch by ID directly — no more fetching all posts and filtering
+        const res = await fetch(`/api/post/${id}`);
         const json = await res.json();
 
-        if (json.success) {
-          const post = json.data.find((p: any) => p._id === id);
-          if (post) {
-            setTitle(post.title || "");
-            setContent(post.content || "");
-            setImage(post.coverImage || "");
-          } else {
-            setError("The story you are looking for has vanished.");
-          }
+        if (json.success && json.data) {
+          setTitle(json.data.title || "");
+          setContent(json.data.content || "");
+          setImage(json.data.coverImage || null);
+        } else {
+          setError("This story could not be found.");
         }
-      } catch (err) {
-        setError("Failed to establish connection with the archive.");
+      } catch {
+        // ✅ Replaced "archive" with a cleaner message
+        setError("Something went wrong. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -63,55 +61,72 @@ export default function EditPost({
     fetchPost();
   }, [id]);
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      const base64 = await fileToBase64(e.target.files[0]);
-      setImage(base64);
-    }
-  };
-
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setError("");
-
-    const token = localStorage.getItem("token");
-
-    try {
-      const slug = title
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)+/g, "");
-
-      const res = await fetch(`/api/post`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          id: id,
-          title: title.trim(),
-          content: content.trim(),
-          coverImage: image,
-          slug: slug,
-        }),
-      });
-
-      if (res.ok) {
-        router.push("/dashboard/my-posts");
-        router.refresh();
-      } else {
-        const result = await res.json();
-        setError(result.error || "Revision failed to save.");
+  // ✅ useCallback: stable reference, no recreation on every render
+  const handleImageChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files?.[0]) {
+        const base64 = await fileToBase64(e.target.files[0]);
+        setImage(base64);
       }
-    } catch (err) {
-      setError("A server anomaly occurred.");
-    } finally {
-      setSaving(false);
-    }
-  };
+    },
+    [],
+  );
+
+  // ✅ useCallback with deps — only recreates when title/content/image changes
+  const handleUpdate = useCallback(
+    async (e?: React.FormEvent) => {
+      e?.preventDefault();
+      if (!title) return;
+      setSaving(true);
+      setError("");
+
+      const token = localStorage.getItem("token");
+
+      try {
+        const slug = title
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)+/g, "");
+
+        const res = await fetch(`/api/post`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            id,
+            title: title.trim(),
+            content: content.trim(),
+            coverImage: image,
+            slug,
+          }),
+        });
+
+        if (res.ok) {
+          router.push("/dashboard/my-posts");
+          router.refresh();
+        } else {
+          const result = await res.json();
+          setError(result.error || "Failed to save your changes.");
+        }
+      } catch {
+        setError("Couldn't reach the server. Check your connection.");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [id, title, content, image, router],
+  );
+
+  // ✅ Stable onChange — prevents RichTextEditor from re-mounting on each keystroke
+  const handleContentChange = useCallback((val: string) => {
+    setContent(val);
+  }, []);
+
+  // ✅ Pre-computed derived value — not inlined in JSX
+  const canvasDepth = content.length;
 
   if (loading) {
     return (
@@ -139,7 +154,7 @@ export default function EditPost({
           </Link>
 
           <button
-            onClick={handleUpdate}
+            onClick={() => handleUpdate()}
             disabled={saving || !title}
             className="bg-black text-white px-10 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] hover:bg-zinc-800 disabled:opacity-10 transition-all hover:scale-105 active:scale-95 flex items-center gap-3"
           >
@@ -168,13 +183,16 @@ export default function EditPost({
             <div className="relative group h-[500px] rounded-[3.5rem] overflow-hidden shadow-2xl transition-all duration-700 bg-gray-50 border border-gray-100">
               {image ? (
                 <>
-                  <img
+                  {/* ✅ next/image replaces <img> */}
+                  <Image
                     src={image}
-                    className="w-full h-full object-cover transition-transform duration-[2s] group-hover:scale-105"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 896px"
+                    className="object-cover transition-transform duration-[2s] group-hover:scale-105"
                     alt="Preview"
                   />
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-                  <label className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-all bg-black/20 backdrop-blur-sm">
+                  <label className="absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-all bg-black/20 backdrop-blur-sm">
                     <div className="bg-white px-8 py-3 rounded-full flex items-center gap-2 shadow-2xl">
                       <ImagePlus size={18} className="text-blue-600" />
                       <span className="text-[10px] font-black uppercase tracking-widest">
@@ -243,8 +261,9 @@ export default function EditPost({
                 <span className="text-[8px] font-black uppercase tracking-widest text-zinc-300 mb-1">
                   Canvas Depth
                 </span>
+                {/* ✅ Pre-computed derived value */}
                 <span className="text-[10px] font-black text-zinc-900 uppercase tracking-tighter">
-                  {content.length} units
+                  {canvasDepth} units
                 </span>
               </div>
             </div>
@@ -252,7 +271,8 @@ export default function EditPost({
 
           {/* Editor Canvas */}
           <div className="prose prose-zinc prose-2xl max-w-none pt-4">
-            <RichTextEditor content={content} onChange={setContent} />
+            {/* ✅ Stable callback — prevents unnecessary re-mounts */}
+            <RichTextEditor content={content} onChange={handleContentChange} />
           </div>
         </form>
       </div>

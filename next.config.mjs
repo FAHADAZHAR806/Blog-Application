@@ -1,10 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // reactCompiler: true, // Next.js 15+ feature
+  // reactCompiler: true,
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "res.cloudinary.com", pathname: "/**" },
       { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
+      { protocol: "https", hostname: "ui-avatars.com", pathname: "/**" },
     ],
   },
 };

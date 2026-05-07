@@ -1,40 +1,142 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { fileToBase64 } from "@/lib/file-to-base64";
 import {
   User,
   Shield,
-  Bell,
   Camera,
   Loader2,
   CheckCircle2,
   ArrowLeft,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 
 export default function SettingsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+  const [twoFA, setTwoFA] = useState(false);
 
-  // States for user data
-  const [name, setName] = useState("Professional Engineer");
-  const [bio, setBio] = useState(
-    "Full-stack developer focused on MERN stack and clean UI/UX.",
+  const [name, setName] = useState("");
+  const [bio, setBio] = useState("");
+  const [avatar, setAvatar] = useState<string>(
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
   );
 
-  const handleUpdate = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  // ✅ localStorage se user data load karo
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    if (!userData) return router.push("/pages/login");
+    const user = JSON.parse(userData);
+    setName(user.name || "");
+    setBio(user.bio || "");
+    if (user.profileImage) setAvatar(user.profileImage);
+  }, [router]);
 
-    // Simulating API Call
-    setTimeout(() => {
-      setLoading(false);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-    }, 1500);
-  };
+  // ✅ Image Cloudinary pe upload karo
+  const handleAvatarChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        setError("Please select a valid image file.");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Image must be under 5MB.");
+        return;
+      }
+
+      setAvatarUploading(true);
+      setError("");
+
+      try {
+        const token = localStorage.getItem("token");
+        const base64 = await fileToBase64(file);
+
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            image: base64,
+            folder: "profiles",
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Upload failed");
+
+        // ✅ Permanent Cloudinary URL set karo
+        setAvatar(data.data.url);
+      } catch (err: any) {
+        setError(err.message || "Image upload failed. Please try again.");
+      } finally {
+        setAvatarUploading(false);
+      }
+    },
+    [],
+  );
+
+  // ✅ /api/user/update route use ho raha hai — sahi URL aur body
+  const handleUpdate = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!name.trim()) return;
+      setLoading(true);
+      setError("");
+
+      try {
+        const token = localStorage.getItem("token");
+        const userData = localStorage.getItem("user");
+        const user = userData ? JSON.parse(userData) : null;
+        if (!user) return router.push("/pages/login");
+
+        const res = await fetch("/api/user/update", {
+          // ✅ sahi route
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            id: user._id || user.id, // ✅ id body mein
+            name: name.trim(),
+            bio: bio.trim(),
+            profileImage: avatar, // ✅ Cloudinary URL
+          }),
+        });
+
+        if (res.ok) {
+          const updated = await res.json();
+          // ✅ localStorage sync taake poori app mein update dikhe
+          localStorage.setItem(
+            "user",
+            JSON.stringify({ ...user, ...updated.data }),
+          );
+          setSuccess(true);
+          setTimeout(() => setSuccess(false), 3000);
+        } else {
+          const result = await res.json();
+          setError(result.message || "Failed to save changes.");
+        }
+      } catch {
+        setError("Couldn't reach the server. Check your connection.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [name, bio, avatar, router],
+  );
 
   return (
     <main className="min-h-screen bg-white text-black selection:bg-zinc-100">
@@ -74,6 +176,12 @@ export default function SettingsPage() {
           </p>
         </header>
 
+        {error && (
+          <div className="mb-10 flex items-center gap-3 p-5 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-[10px] font-black uppercase tracking-widest">
+            <AlertCircle size={14} /> {error}
+          </div>
+        )}
+
         <form onSubmit={handleUpdate} className="space-y-16">
           {/* Profile Section */}
           <section className="space-y-8">
@@ -84,33 +192,57 @@ export default function SettingsPage() {
               </span>
             </div>
 
-            {/* Avatar Upload */}
+            {/* Avatar */}
             <div className="flex items-center gap-8">
               <div className="relative group">
-                <div className="w-24 h-24 rounded-[2rem] bg-zinc-100 overflow-hidden border border-zinc-100 transition-transform group-hover:scale-105">
-                  <img
-                    src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+                <div className="relative w-24 h-24 rounded-[2rem] overflow-hidden border border-zinc-100 transition-transform group-hover:scale-105">
+                  <Image
+                    src={avatar}
                     alt="Avatar"
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="96px"
+                    className="object-cover"
                   />
+                  {avatarUploading && (
+                    <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                      <Loader2 size={20} className="animate-spin text-black" />
+                    </div>
+                  )}
                 </div>
-                <label className="absolute -bottom-2 -right-2 p-2 bg-black text-white rounded-xl cursor-pointer hover:bg-zinc-800 transition-all shadow-xl">
+                <label
+                  className={`absolute -bottom-2 -right-2 p-2 bg-black text-white rounded-xl shadow-xl transition-all ${
+                    avatarUploading
+                      ? "opacity-50 cursor-not-allowed"
+                      : "cursor-pointer hover:bg-zinc-800"
+                  }`}
+                >
                   <Camera size={14} />
-                  <input type="file" className="hidden" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={avatarUploading}
+                    onChange={handleAvatarChange}
+                  />
                 </label>
               </div>
+
               <div className="space-y-1">
                 <h3 className="text-sm font-black uppercase tracking-tight">
                   Display Portrait
                 </h3>
                 <p className="text-[10px] text-zinc-400 font-bold leading-relaxed">
-                  Recommended: Cinematic editorial style portraits for recruiter
-                  visibility.
+                  Max 5MB. Uploads to cloud — persists across all sessions.
                 </p>
+                {avatarUploading && (
+                  <p className="text-[10px] text-blue-500 font-black uppercase tracking-widest animate-pulse">
+                    Uploading to cloud...
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Form Fields */}
+            {/* Fields */}
             <div className="space-y-6 pt-4">
               <div className="group">
                 <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 group-focus-within:text-black transition-colors mb-2 block">
@@ -138,7 +270,7 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          {/* Account Security Section */}
+          {/* Security */}
           <section className="space-y-8 pt-8 border-t border-zinc-50">
             <div className="flex items-center gap-4 text-zinc-300">
               <Shield size={14} />
@@ -156,20 +288,35 @@ export default function SettingsPage() {
                   Enhance your architectural security.
                 </p>
               </div>
-              <div className="w-12 h-6 bg-zinc-200 rounded-full relative p-1 cursor-pointer">
-                <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
-              </div>
+              <button
+                type="button"
+                onClick={() => setTwoFA((v) => !v)}
+                className={`w-12 h-6 rounded-full relative p-1 cursor-pointer transition-colors duration-300 ${
+                  twoFA ? "bg-black" : "bg-zinc-200"
+                }`}
+              >
+                <div
+                  className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300 ${
+                    twoFA ? "translate-x-6" : "translate-x-0"
+                  }`}
+                />
+              </button>
             </div>
           </section>
 
           {/* Submit */}
           <button
             type="submit"
-            disabled={loading}
-            className="w-full bg-black text-white py-5 rounded-full text-[10px] font-black uppercase tracking-[0.3em] hover:bg-zinc-800 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 shadow-2xl shadow-zinc-200"
+            disabled={loading || avatarUploading || !name.trim()}
+            className="w-full bg-black text-white py-5 rounded-full text-[10px] font-black uppercase tracking-[0.3em] hover:bg-zinc-800 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 shadow-2xl shadow-zinc-200 disabled:opacity-20"
           >
             {loading ? (
               <Loader2 size={16} className="animate-spin" />
+            ) : avatarUploading ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Waiting for image...
+              </>
             ) : (
               "Confirm All Revisions"
             )}

@@ -15,7 +15,6 @@ export default function ForgetPassword() {
     setMessage("");
 
     try {
-      // Yahan aap apni API call connect karenge
       const res = await fetch("/api/auth/forget-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -56,7 +55,7 @@ export default function ForgetPassword() {
             <>
               <div className="mb-8">
                 <h2 className="text-lg font-bold text-slate-800">
-                  Forget Password?
+                  Forgot Password?
                 </h2>
                 <p className="text-sm text-slate-500 mt-1">
                   Enter your email to receive a recovery link.
@@ -66,14 +65,14 @@ export default function ForgetPassword() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                    Work Email
+                    Email
                   </label>
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@company.com"
+                    placeholder="Enter Your Email"
                     className="w-full mt-2 p-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-600/10 transition-all outline-none"
                   />
                 </div>
