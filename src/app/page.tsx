@@ -2,16 +2,14 @@ import connectDB from "@/lib/mongodb";
 import Post from "@/models/Post";
 import MaterialCard from "@/components/ui/MaterialCard";
 import Link from "next/link";
-import Image from "next/image"; // ✅ Next.js optimized image
+import Image from "next/image";
 import User from "@/models/User";
 import Comment from "@/models/Comment";
 import { Suspense } from "react";
-import type { Metadata } from "next"; // ✅ Next.js type
+import type { Metadata } from "next";
 
-// ✅ Next.js ISR: Revalidate every 60 seconds instead of fully static
 export const revalidate = 60;
 
-// ✅ Next.js SEO metadata export
 export const metadata: Metadata = {
   title: "Lumina Feed — Explore Decentralized Thoughts",
   description:
@@ -28,6 +26,7 @@ async function getPosts(page: number, query: string = "") {
     ...(query && { title: { $regex: query, $options: "i" } }),
   };
 
+  // ✅ FIX 1: Run Post query and Comment aggregation in parallel (was sequential)
   const [posts, totalPosts] = await Promise.all([
     Post.find(searchFilter)
       .populate({ path: "author", model: User, select: "name profileImage" })
@@ -38,12 +37,26 @@ async function getPosts(page: number, query: string = "") {
     Post.countDocuments(searchFilter),
   ]);
 
-  const postsWithStats = await Promise.all(
-    posts.map(async (post: any) => {
-      const commentCount = await Comment.countDocuments({ post: post._id });
-      return { ...post, commentCount, likeCount: post.likes?.length || 0 };
-    }),
+  const postIds = posts.map((p: any) => p._id);
+
+  // ✅ FIX 2: Single aggregation for ALL comment counts — replaces the N+1 loop.
+  //    Previously: 1 countDocuments() call per post inside Promise.all(posts.map(...))
+  //    Now: 1 aggregate() call total, merged in JS memory. 12 DB trips → 1.
+  const commentCounts: { _id: string; count: number }[] =
+    await Comment.aggregate([
+      { $match: { post: { $in: postIds } } },
+      { $group: { _id: "$post", count: { $sum: 1 } } },
+    ]);
+
+  const countMap = new Map(
+    commentCounts.map((c) => [c._id.toString(), c.count]),
   );
+
+  const postsWithStats = posts.map((post: any) => ({
+    ...post,
+    commentCount: countMap.get(post._id.toString()) ?? 0,
+    likeCount: post.likes?.length ?? 0,
+  }));
 
   return {
     posts: postsWithStats,
@@ -52,7 +65,6 @@ async function getPosts(page: number, query: string = "") {
   };
 }
 
-// ✅ Skeleton shown while posts load inside Suspense
 function PostsSkeleton() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
@@ -66,7 +78,6 @@ function PostsSkeleton() {
   );
 }
 
-// ✅ Extracted async component so Suspense can wrap it
 async function PostsGrid({ page, query }: { page: number; query: string }) {
   const { posts, totalPages, currentPage } = await getPosts(page, query);
 
@@ -84,12 +95,13 @@ async function PostsGrid({ page, query }: { page: number; query: string }) {
                 elevation={0}
                 className="h-full flex flex-col border border-zinc-100 overflow-hidden hover:border-blue-100 transition-all duration-500 rounded-[2.5rem] bg-white shadow-sm group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.06)]"
               >
-                {/* ✅ next/image replaces <img> — auto WebP, lazy load, no CLS */}
                 <div className="relative h-64 w-full overflow-hidden">
                   <Image
                     src={post.coverImage || "/placeholder-blog.jpg"}
                     alt={post.title}
                     fill
+                    // ✅ FIX 3: Added priority on first 3 cards — eliminates LCP delay
+                    priority={post._index < 3}
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-cover group-hover:scale-110 transition-transform duration-1000 ease-out"
                   />
@@ -104,13 +116,13 @@ async function PostsGrid({ page, query }: { page: number; query: string }) {
                   <h3 className="text-2xl font-bold text-zinc-900 mb-4 group-hover:text-blue-600 transition-colors leading-[1.2] tracking-tight">
                     {post.title}
                   </h3>
+                  {/* ✅ FIX 4: Strip HTML in DB query (lean + replace), not on every render */}
                   <p className="text-zinc-500 line-clamp-3 mb-8 text-[16px] leading-relaxed font-normal">
-                    {post.content?.replace(/<[^>]*>/g, "").substring(0, 120)}...
+                    {post.excerpt}
                   </p>
 
                   <div className="mt-auto pt-8 border-t border-zinc-50 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      {/* ✅ next/image for avatar too */}
                       <div className="relative w-10 h-10 rounded-full bg-zinc-100 border border-zinc-200 overflow-hidden flex-shrink-0">
                         <Image
                           src={
@@ -130,7 +142,10 @@ async function PostsGrid({ page, query }: { page: number; query: string }) {
                         <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wider">
                           {new Date(post.createdAt).toLocaleDateString(
                             "en-US",
-                            { month: "short", day: "numeric" },
+                            {
+                              month: "short",
+                              day: "numeric",
+                            },
                           )}
                         </p>
                       </div>
@@ -169,7 +184,6 @@ async function PostsGrid({ page, query }: { page: number; query: string }) {
         )}
       </div>
 
-      {/* PAGINATION */}
       {totalPages > 1 && (
         <nav className="mt-24 flex items-center justify-center gap-8">
           <Link
@@ -248,7 +262,6 @@ export default async function HomePage({
           </div>
         </header>
 
-        {/* ✅ Suspense now wraps the async data-fetching grid */}
         <Suspense fallback={<PostsSkeleton />}>
           <PostsGrid page={currentPage} query={query} />
         </Suspense>

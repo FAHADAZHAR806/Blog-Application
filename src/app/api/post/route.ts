@@ -4,7 +4,6 @@ import Comment from "@/models/Comment";
 import { errorResponse } from "@/lib/api-response";
 import { NextResponse } from "next/server";
 
-// GET METHOD
 export async function GET(req: Request) {
   try {
     await connectDB();
@@ -19,25 +18,36 @@ export async function GET(req: Request) {
       query = {} as any;
     }
 
-    const posts = await Post.find(query)
-      .populate("author", "name email profileImage")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    // ✅ SPEED FIX 1: Run find + countDocuments at the same time instead of one after the other
+    // ✅ SPEED FIX 2: .lean() returns plain JS objects — no Mongoose wrapper overhead,
+    //    also replaces the fragile ...post._doc spread
+    const [posts, totalPosts] = await Promise.all([
+      Post.find(query)
+        .populate("author", "name email profileImage")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Post.countDocuments(query),
+    ]);
 
-    const totalPosts = await Post.countDocuments(query);
     const totalPages = Math.ceil(totalPosts / limit);
 
-    const postsWithEngagement = await Promise.all(
-      posts.map(async (post: any) => {
-        const commentCount = await Comment.countDocuments({ post: post._id });
-        return {
-          ...post._doc,
-          commentCount,
-          likeCount: post.likes?.length || 0,
-        };
-      }),
+    // ✅ SPEED FIX 3: Was calling Comment.countDocuments() once per post inside a loop.
+    //    12 posts = 13 separate DB calls. Now one aggregate returns all counts at once.
+    const commentCounts = await Comment.aggregate([
+      { $match: { post: { $in: posts.map((p) => p._id) } } },
+      { $group: { _id: "$post", count: { $sum: 1 } } },
+    ]);
+    const countMap = new Map(
+      commentCounts.map((c: any) => [c._id.toString(), c.count]),
     );
+
+    const postsWithEngagement = posts.map((post: any) => ({
+      ...post,
+      commentCount: countMap.get(post._id.toString()) ?? 0,
+      likeCount: post.likes?.length || 0,
+    }));
 
     return NextResponse.json({
       success: true,
@@ -49,7 +59,7 @@ export async function GET(req: Request) {
   }
 }
 
-// POST METHOD
+// POST, PUT, DELETE — unchanged
 export async function POST(req: Request) {
   try {
     await connectDB();
@@ -84,7 +94,6 @@ export async function POST(req: Request) {
   }
 }
 
-// PUT METHOD (Zaroori changes ke sath)
 export async function PUT(req: Request) {
   try {
     await connectDB();
@@ -98,7 +107,6 @@ export async function PUT(req: Request) {
       );
     }
 
-    // 1. Check if post exists
     const existingPost = await Post.findById(id);
     if (!existingPost) {
       return NextResponse.json(
@@ -107,11 +115,10 @@ export async function PUT(req: Request) {
       );
     }
 
-    // 2. Update logic
     const updatedPost = await Post.findByIdAndUpdate(
       id,
       { $set: updateData },
-      { new: true, runValidators: true }, // validators on rakhein taake data theek save ho
+      { new: true, runValidators: true },
     );
 
     return NextResponse.json({
@@ -126,7 +133,6 @@ export async function PUT(req: Request) {
   }
 }
 
-// DELETE METHOD
 export async function DELETE(req: Request) {
   try {
     await connectDB();
